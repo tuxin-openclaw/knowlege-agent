@@ -6,8 +6,8 @@ import {
   ToolMessage,
 } from "@langchain/core/messages";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { readFile } from "node:fs/promises";
 import chalk from "chalk";
+import { readMcpConfig } from "./utils/file.mjs";
 
 const model = new ChatOpenAI({
   modelName: process.env.OPENAI_MODEL_NAME,
@@ -18,23 +18,14 @@ const model = new ChatOpenAI({
   },
 });
 
-const readMcpConfig = async () => {
-  const MCP_CONFIG_PATH = new URL("../.vscode/mcp.json", import.meta.url);
-  const content = await readFile(MCP_CONFIG_PATH, "utf-8");
-  return JSON.parse(content);
-};
 const mcpConfig = await readMcpConfig();
-const amapKey = process.env.AMAP_MAPS_API_KEY;
-if (!amapKey) {
-  throw new Error(
-    "缺少环境变量 AMAP_MAPS_API_KEY，请在项目根目录的 .env 中配置高德地图 Key",
-  );
-}
-mcpConfig.mcpServers["amap-maps-streamableHTTP"].url =
-  `https://mcp.amap.com/mcp?key=${encodeURIComponent(amapKey)}`;
-
 const mcpClient = new MultiServerMCPClient({
-  mcpServers: mcpConfig.mcpServers,
+  mcpServers: {
+    ...mcpConfig.mcpServers,
+    "amap-maps-streamableHTTP": {
+      url: `https://mcp.amap.com/mcp?key=${process.env.AMAP_MAPS_API_KEY}`,
+    },
+  },
 });
 
 const mcpTools = await mcpClient.getTools();
@@ -113,8 +104,6 @@ const runCase = async (input, maxIterations = 30) => {
 };
 
 try {
-  // await runCase("请查询用户 002 的信息");
-  // await runCase("MCP Server 的使用指南是什么");
   // await runCase("北京南站附近的酒店，以及去的路线");
   // await runCase(
   //   "北京南站附近的5个酒店，以及去的路线，路线规划生成文档保存到 /Users/axin/Desktop/knowlege-agent 的一个 md 文件",

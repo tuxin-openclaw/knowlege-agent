@@ -10,7 +10,7 @@ import {
   listDirTool,
   readFileTool,
   writeFileTool,
-} from "./6.2-tools.mjs";
+} from "./5.2-tools.mjs";
 import chalk from "chalk";
 
 const model = new ChatOpenAI({

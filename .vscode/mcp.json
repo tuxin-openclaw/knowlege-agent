@@ -3,11 +3,8 @@
     "my-mcp-server": {
       "command": "node",
       "args": [
-        "src/7.1-my-mcp-server.mjs"
+        "src/6.1-my-mcp-server.mjs"
       ]
-    },
-    "amap-maps-streamableHTTP": {
-      "url": "https://mcp.amap.com/mcp"
     },
     "filesystem": {
       "command": "npx",
