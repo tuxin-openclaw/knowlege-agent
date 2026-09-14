@@ -24,6 +24,15 @@ const readMcpConfig = async () => {
   return JSON.parse(content);
 };
 const mcpConfig = await readMcpConfig();
+const amapKey = process.env.AMAP_MAPS_API_KEY;
+if (!amapKey) {
+  throw new Error(
+    "缺少环境变量 AMAP_MAPS_API_KEY，请在项目根目录的 .env 中配置高德地图 Key",
+  );
+}
+mcpConfig.mcpServers["amap-maps-streamableHTTP"].url =
+  `https://mcp.amap.com/mcp?key=${encodeURIComponent(amapKey)}`;
+
 const mcpClient = new MultiServerMCPClient({
   mcpServers: mcpConfig.mcpServers,
 });
@@ -57,17 +66,45 @@ const runCase = async (input, maxIterations = 30) => {
       return response.content;
     }
 
+    console.log(
+      chalk.bgBlue(`🔍 检测到 ${response.tool_calls.length} 个工具调用`),
+    );
+    console.log(
+      chalk.bgBlue(
+        `🔍 工具调用: ${response.tool_calls.map((t) => t.name).join(", ")}`,
+      ),
+    );
     for (const toolCall of response.tool_calls) {
       const mcpTool = mcpTools.find((tool) => tool.name === toolCall.name);
       if (mcpTool) {
-        const result = await mcpTool.invoke(toolCall.args);
+        try {
+          const toolRes = await mcpTool.invoke(toolCall.args);
 
-        messages.push(
-          new ToolMessage({
-            content: result,
-            tool_call_id: toolCall.id,
-          }),
-        );
+          // 确保 content 为字符串
+          let contenStr;
+          if (typeof toolRes === "string") {
+            contenStr = toolRes;
+          } else if (toolRes?.text) {
+            // mcp FileSystem 返回的 toolRes 为 { text: '...' }
+            contenStr = toolRes.text;
+          }
+          messages.push(
+            new ToolMessage({
+              content: contenStr,
+              tool_call_id: toolCall.id,
+            }),
+          );
+        } catch (error) {
+          console.error("MCP 工具调用失败：", {
+            name: toolCall.name,
+            args: toolCall.args,
+            message: error.message,
+            code: error.code,
+            status: error.status,
+            cause: error.cause,
+          });
+          throw error;
+        }
       }
     }
   }
@@ -77,7 +114,14 @@ const runCase = async (input, maxIterations = 30) => {
 
 try {
   // await runCase("请查询用户 002 的信息");
-  await runCase("MCP Server 的使用指南是什么");
+  // await runCase("MCP Server 的使用指南是什么");
+  // await runCase("北京南站附近的酒店，以及去的路线");
+  // await runCase(
+  //   "北京南站附近的5个酒店，以及去的路线，路线规划生成文档保存到 /Users/axin/Desktop/knowlege-agent 的一个 md 文件",
+  // );
+  await runCase(
+    "北京南站附近的酒店，最近的 3 个酒店，拿到酒店图片，打开浏览器，展示每个酒店的图片，每个 tab 一个 url 展示，并且在把那个页面标题改为酒店名",
+  );
 } finally {
   // 关闭 MCP Client，结束进程
   mcpClient.close();

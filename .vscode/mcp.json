@@ -5,6 +5,24 @@
       "args": [
         "src/7.1-my-mcp-server.mjs"
       ]
+    },
+    "amap-maps-streamableHTTP": {
+      "url": "https://mcp.amap.com/mcp"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/axin/Desktop/knowlege-agent"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
     }
   }
 }
