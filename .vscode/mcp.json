@@ -2,7 +2,9 @@
   "mcpServers": {
     "my-mcp-server": {
       "command": "node",
-      "args": ["src/7.1-my-mcp-server.mjs"]
+      "args": [
+        "src/7.1-my-mcp-server.mjs"
+      ]
     }
   }
 }
