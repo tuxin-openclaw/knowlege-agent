@@ -14,8 +14,8 @@ const model = new ChatOpenAI({
 });
 
 const embeddings = new OllamaEmbeddings({
-  model: "bge-m3",
-  baseUrl: "http://localhost:11434",
+  model: process.env.EMBEDDINGS_MODEL_NAME,
+  baseUrl: process.env.EMBEDDINGS_BASE_URL,
 });
 
 const documents = [

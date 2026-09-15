@@ -14,3 +14,8 @@
 ### 嵌入模型 Embedding Model
 
 与大模型不同，它只负责把知识转成向量。
+
+## 知识库的 loader 和 splitter
+
+- loader：把各种知识来源通过 loader 转化为文档存入知识库
+- splitter：文档很大时，需要拆分文档
