@@ -30,6 +30,7 @@ const cheerioLoader = new CheerioWebBaseLoader(
 
 const documents = await cheerioLoader.load();
 
+// RecursiveCharacterTextSplitter 递归分割，比如“ 。 ？ ！”就是先尝试按照 。 分割，如果分割后大于 chunk 剩余空间再按照 ？ 分割，是一个递归过程。
 const textSplitter = new RecursiveCharacterTextSplitter({
   chunkSize: 500, // 每个分块字符数
   chunkOverlap: 50, // 分块之间重叠字符数，保持语义连贯
