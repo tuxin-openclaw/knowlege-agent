@@ -1,0 +1,17 @@
+{
+  "name": "@knowledge/course-utils",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./env": "./src/env.mjs",
+    "./mcp-config": "./src/mcp-config.mjs"
+  },
+  "scripts": {
+    "check": "node --check src/env.mjs && node --check src/mcp-config.mjs",
+    "format:check": "prettier --check src package.json"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}

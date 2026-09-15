@@ -1,0 +1,16 @@
+{
+  "name": "@knowledge/ch07-mcp-external",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/mcp-test.mjs"
+  },
+  "dependencies": {
+    "@knowledge/course-utils": "workspace:*",
+    "@langchain/core": "^1.2.11",
+    "@langchain/mcp-adapters": "^1.1.4",
+    "@langchain/openai": "^1.5.12",
+    "chalk": "^6.0.0"
+  }
+}

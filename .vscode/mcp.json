@@ -2,9 +2,7 @@
   "mcpServers": {
     "my-mcp-server": {
       "command": "node",
-      "args": [
-        "src/6.1-my-mcp-server.mjs"
-      ]
+      "args": ["apps/ch06-mcp/src/my-mcp-server.mjs"]
     },
     "filesystem": {
       "command": "npx",
@@ -16,10 +14,7 @@
     },
     "chrome-devtools": {
       "command": "npx",
-      "args": [
-        "-y",
-        "chrome-devtools-mcp@latest"
-      ]
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     }
   }
 }

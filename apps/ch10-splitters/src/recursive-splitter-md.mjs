@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@knowledge/course-utils/env";
 import "cheerio";
 import { Document } from "@langchain/core/documents";
 import { MarkdownTextSplitter } from "@langchain/textsplitters";

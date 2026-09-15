@@ -1,7 +1,7 @@
 import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import { ChatOpenAI } from "@langchain/openai";
 import { OllamaEmbeddings } from "@langchain/ollama";
-import "dotenv/config";
+import "@knowledge/course-utils/env";
 import { Document } from "@langchain/core/documents";
 
 const model = new ChatOpenAI({

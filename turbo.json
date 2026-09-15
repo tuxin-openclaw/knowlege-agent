@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "globalDependencies": [".env", ".vscode/mcp.json"],
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "check": {
+      "dependsOn": ["^check"],
+      "outputs": []
+    },
+    "format:check": {
+      "outputs": []
+    }
+  }
+}

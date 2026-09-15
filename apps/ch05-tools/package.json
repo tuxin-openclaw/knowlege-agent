@@ -1,0 +1,17 @@
+{
+  "name": "@knowledge/ch05-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cursor": "node src/mini-cursor.mjs",
+    "node": "node src/node-exec.mjs"
+  },
+  "dependencies": {
+    "@knowledge/course-utils": "workspace:*",
+    "@langchain/core": "^1.2.11",
+    "@langchain/openai": "^1.5.12",
+    "chalk": "^6.0.0",
+    "zod": "^4.6.2"
+  }
+}

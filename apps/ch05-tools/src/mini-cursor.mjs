@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@knowledge/course-utils/env";
 import { ChatOpenAI } from "@langchain/openai";
 import {
   HumanMessage,
@@ -10,7 +10,7 @@ import {
   listDirTool,
   readFileTool,
   writeFileTool,
-} from "./5.2-tools.mjs";
+} from "./tools.mjs";
 import chalk from "chalk";
 
 const model = new ChatOpenAI({
@@ -88,7 +88,7 @@ const runAgentWithTools = async (input, maxIterations = 30) => {
 
 const case1 = `创建一个功能丰富的 React TodoList 应用：
 
-1. 创建项目：echo -e "n\nn" | pnpm create vite demo/react-todo-app --template react-ts
+1. 创建项目：echo -e "n\nn" | pnpm create vite output/react-todo-app --template react-ts
 2. 修改 src/App.tsx, 实现完整功能的 TodoList：
  - 添加、删除、编辑、标记完成
  - 分类筛选（全部/进行中/已完成）

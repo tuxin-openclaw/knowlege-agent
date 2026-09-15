@@ -1,7 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
-import dotenv from "dotenv";
-
-dotenv.config()
+import "@knowledge/course-utils/env";
 
 const model = new ChatOpenAI({
   modelName: process.env.OPENAI_MODEL_NAME,

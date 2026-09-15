@@ -1,0 +1,16 @@
+{
+  "name": "@knowledge/ch08-rag",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/rag.mjs"
+  },
+  "dependencies": {
+    "@knowledge/course-utils": "workspace:*",
+    "@langchain/classic": "^1.0.48",
+    "@langchain/core": "^1.2.11",
+    "@langchain/ollama": "^1.3.0",
+    "@langchain/openai": "^1.5.12"
+  }
+}

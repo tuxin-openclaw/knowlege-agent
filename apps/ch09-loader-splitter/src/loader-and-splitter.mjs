@@ -1,12 +1,10 @@
-import { config } from "dotenv";
+import "@knowledge/course-utils/env";
 import "cheerio";
 import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { ChatOpenAI } from "@langchain/openai";
-
-config({ path: new URL("../.env", import.meta.url), override: true });
 
 const model = new ChatOpenAI({
   temperature: 0,

@@ -1,28 +1,14 @@
 {
   "name": "knowlege-agent",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier --write ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@langchain/classic": "^1.0.48",
-    "@langchain/community": "^1.1.29",
-    "@langchain/core": "^1.2.10",
-    "@langchain/mcp-adapters": "^1.1.4",
-    "@langchain/ollama": "^1.3.0",
-    "@langchain/openai": "^1.5.12",
-    "@langchain/textsplitters": "^1.0.1",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "chalk": "^6.0.0",
-    "cheerio": "^1.2.0",
-    "dotenv": "^17.4.2",
-    "js-tiktoken": "^1.0.21",
-    "zod": "^4.6.2"
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6"
   }
 }

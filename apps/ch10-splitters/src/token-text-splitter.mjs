@@ -1,13 +1,8 @@
-import "dotenv/config";
+import "@knowledge/course-utils/env";
 import "cheerio";
-import { Document } from "@langchain/core/documents";
-import {
-  CharacterTextSplitter,
-  RecursiveCharacterTextSplitter,
-} from "@langchain/textsplitters";
+import { TokenTextSplitter } from "@langchain/textsplitters";
 import { getEncoding, getEncodingNameForModel } from "js-tiktoken";
-
-const enc = getEncoding(getEncodingNameForModel("gpt-4"));
+import { Document } from "@langchain/core/documents";
 
 const logDocument = new Document({
   pageContent: `[2024-01-15 10:00:00] INFO: Application started
@@ -21,23 +16,17 @@ const logDocument = new Document({
 `,
 });
 
-// CharacterTextSplitter 严格按照字符分割，就算超过chunkSize，如果没有匹配的字符也不会分割
-// const logTextSplitter = new CharacterTextSplitter({
-//   separator: "\n",
-//   chunkSize: 200,
-//   chunkOverlap: 20,
-// });
-const logTextSplitter = new RecursiveCharacterTextSplitter({
-  separators: ["\n", "。", "，"],
-  chunkSize: 200,
-  chunkOverlap: 20,
-  // 如果希望按照 token 长度来设置 chunkSize，可自定义长度计算
-  lengthFunction: (text) => enc.encode(text).length,
+const encodingName = getEncodingNameForModel("gpt-4");
+const logTextSpliter = new TokenTextSplitter({
+  encodingName,
+  chunkSize: 50,
+  chunkOverlap: 10,
 });
 
-const splitDocs = await logTextSplitter.splitDocuments([logDocument]);
+const splitDocs = await logTextSpliter.splitDocuments([logDocument]);
 console.log("🚀 ~ splitDocs:", splitDocs);
 
+const enc = getEncoding(encodingName);
 splitDocs.forEach((doc) => {
   console.log(doc);
   console.log("charater length", doc.pageContent.length);

@@ -1,0 +1,16 @@
+{
+  "name": "@knowledge/ch04-langchain",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hello": "node src/hello-langchain.mjs",
+    "file-read": "node src/tool-file-read.mjs"
+  },
+  "dependencies": {
+    "@knowledge/course-utils": "workspace:*",
+    "@langchain/core": "^1.2.11",
+    "@langchain/openai": "^1.5.12",
+    "zod": "^4.6.2"
+  }
+}

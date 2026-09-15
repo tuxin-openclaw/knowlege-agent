@@ -19,3 +19,9 @@
 
 - loader：把各种知识来源通过 loader 转化为文档存入知识库
 - splitter：文档很大时，需要拆分文档
+
+## 向量数据库 Milvus
+
+> Milvus 根据语义匹配查询，可以用自然语言来检索
+
+[下载 milvus docker 配置](https://github.com/milvus-io/milvus/releases)

@@ -1,0 +1,21 @@
+{
+  "name": "@knowledge/ch10-splitters",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "text": "node src/character-text-splitter.mjs",
+    "code": "node src/recursive-splitter-code.mjs",
+    "latex": "node src/recursive-splitter-latex.mjs",
+    "md": "node src/recursive-splitter-md.mjs",
+    "tiktoken": "node src/tiktoken.mjs",
+    "tokens": "node src/token-text-splitter.mjs"
+  },
+  "dependencies": {
+    "@knowledge/course-utils": "workspace:*",
+    "@langchain/core": "^1.2.11",
+    "@langchain/textsplitters": "^1.0.1",
+    "cheerio": "^1.2.0",
+    "js-tiktoken": "^1.0.21"
+  }
+}

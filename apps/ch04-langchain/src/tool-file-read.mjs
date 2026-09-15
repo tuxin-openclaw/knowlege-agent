@@ -1,9 +1,13 @@
-import 'dotenv/config';
+import "@knowledge/course-utils/env";
 import { ChatOpenAI } from "@langchain/openai";
 import { tool } from "@langchain/core/tools";
 import fs from "node:fs/promises";
 import { z } from "zod";
-import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import {
+  HumanMessage,
+  SystemMessage,
+  ToolMessage,
+} from "@langchain/core/messages";
 
 const model = new ChatOpenAI({
   modelName: process.env.OPENAI_MODEL_NAME,
@@ -22,7 +26,8 @@ const readFileTool = tool(
   },
   {
     name: "read_file",
-    description: "用来读取文件内容。当用户要求读取文件、查看代码、分析文件内容时，调用此工具。输入文件路径（可以是相对路径或绝对路径）。",
+    description:
+      "用来读取文件内容。当用户要求读取文件、查看代码、分析文件内容时，调用此工具。输入文件路径（可以是相对路径或绝对路径）。",
     /**
      * 用zod转成 JSON Schema
      * {
@@ -34,16 +39,14 @@ const readFileTool = tool(
      * }
      */
     schema: z.object({
-      filePath: z.string().describe("要读取的文件路径")
-    })
-  }
-)
+      filePath: z.string().describe("要读取的文件路径"),
+    }),
+  },
+);
 
-const tools = [
-  readFileTool
-]
+const tools = [readFileTool];
 
-const modelWithTools = model.bindTools(tools)
+const modelWithTools = model.bindTools(tools);
 
 const msgs = [
   new SystemMessage(`你是一个代码助手，可以使用工具读取文件并解释代码。
@@ -56,44 +59,46 @@ const msgs = [
 可用工具：
 - read_file: 读取文件内容（使用此工具来获取文件内容）
 `),
-  new HumanMessage('读取文件 src/5.1-tool-file-read.mjs 文件内容并解释代码')
-]
+  new HumanMessage("读取文件 src/tool-file-read.mjs 文件内容并解释代码"),
+];
 
 let resp = await modelWithTools.invoke(msgs);
 
-msgs.push(resp)
+msgs.push(resp);
 
 while (resp.tool_calls?.length) {
   console.log(`\n【${resp.tool_calls?.length}个工具调用】`);
 
-  const toolCallsPromise = resp.tool_calls.map(async toolCall => {
-    const tool = tools.find(tool => tool.name === toolCall.name);
-    if(!tool) {
-      return `[错误] 找不到工具 ${toolCall.name}`
+  const toolCallsPromise = resp.tool_calls.map(async (toolCall) => {
+    const tool = tools.find((tool) => tool.name === toolCall.name);
+    if (!tool) {
+      return `[错误] 找不到工具 ${toolCall.name}`;
     }
 
     console.log(`\n[执行工具] ${tool.name}(${JSON.stringify(toolCall.args)})`);
     try {
       const res = await tool.invoke(toolCall.args);
-      return res
+      return res;
     } catch (error) {
-      return `[错误] ${error.message}`
+      return `[错误] ${error.message}`;
     }
-  })
+  });
 
   const toolResults = await Promise.all(toolCallsPromise);
-  
+
   // 将工具结果添加到消息列表
   resp.tool_calls.forEach((toolCall, index) => {
-    msgs.push(new ToolMessage({
-      content: toolResults[index],
-      tool_call_id: toolCall.id
-    }));
-  })
+    msgs.push(
+      new ToolMessage({
+        content: toolResults[index],
+        tool_call_id: toolCall.id,
+      }),
+    );
+  });
 
   // 再次调用模型，传入工具结果
-  resp = await modelWithTools.invoke(msgs)
-  msgs.push(resp)
+  resp = await modelWithTools.invoke(msgs);
+  msgs.push(resp);
 }
 
 console.log(`\n[最终结果]\n ${resp.content}`);

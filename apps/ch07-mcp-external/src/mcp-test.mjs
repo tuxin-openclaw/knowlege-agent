@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@knowledge/course-utils/env";
 import { ChatOpenAI } from "@langchain/openai";
 import {
   HumanMessage,
@@ -7,7 +7,7 @@ import {
 } from "@langchain/core/messages";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import chalk from "chalk";
-import { readMcpConfig } from "./utils/file.mjs";
+import { readMcpConfig } from "@knowledge/course-utils/mcp-config";
 
 const model = new ChatOpenAI({
   modelName: process.env.OPENAI_MODEL_NAME,
@@ -19,9 +19,13 @@ const model = new ChatOpenAI({
 });
 
 const mcpConfig = await readMcpConfig();
-
 const mcpClient = new MultiServerMCPClient({
-  mcpServers: mcpConfig.mcpServers,
+  mcpServers: {
+    ...mcpConfig.mcpServers,
+    "amap-maps-streamableHTTP": {
+      url: `https://mcp.amap.com/mcp?key=${process.env.AMAP_MAPS_API_KEY}`,
+    },
+  },
 });
 
 const mcpTools = await mcpClient.getTools();
@@ -100,8 +104,13 @@ const runCase = async (input, maxIterations = 30) => {
 };
 
 try {
-  await runCase("请查询用户 002 的信息");
-  // await runCase("MCP Server 的使用指南是什么");
+  // await runCase("北京南站附近的酒店，以及去的路线");
+  // await runCase(
+  //   "北京南站附近的3个酒店，以及去的路线，路线规划生成文档保存到 /Users/axin/Desktop/knowlege-agent/apps/ch07-mcp-external/output 的一个 md 文件",
+  // );
+  await runCase(
+    "北京南站附近的酒店，最近的 3 个酒店，拿到酒店图片，打开浏览器，展示每个酒店的图片，每个 tab 一个 url 展示，并且在把那个页面标题改为酒店名",
+  );
 } finally {
   // 关闭 MCP Client，结束进程
   mcpClient.close();
