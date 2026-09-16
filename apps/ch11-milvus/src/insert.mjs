@@ -49,7 +49,6 @@ async function main() {
       // 指定用余弦相似度作为距离度量
       metric_type: MetricType.COSINE,
       params: {
-        // 指定向量维度
         nlist: 1024,
       },
     });

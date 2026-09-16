@@ -1,0 +1,25 @@
+{
+  "name": "ch12-ebook-assistant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "write": "node src/ebook-writer.mjs",
+    "query": "node src/ebook-query.mjs",
+    "rag": "node src/ebook-read-rag.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@knowledge/ai-utils": "workspace:*",
+    "@knowledge/course-utils": "workspace:*",
+    "@langchain/community": "^1.1.29",
+    "@langchain/textsplitters": "^1.0.1",
+    "@zilliz/milvus2-sdk-node": "^3.0.5",
+    "chalk": "^6.0.0",
+    "epub2": "^3.0.2",
+    "html-to-text": "^10.0.1"
+  }
+}
