@@ -3,7 +3,7 @@ import {
   COLLECTION_NAME,
   connectMilvus,
   getEmbedding,
-} from "./shared/index.mjs";
+} from "@knowledge/ai-utils";
 import chalk from "chalk";
 
 async function main() {

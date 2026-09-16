@@ -7,7 +7,7 @@ import {
   connectMilvus,
   getEmbedding,
   loadCollection,
-} from "./shared/index.mjs";
+} from "@knowledge/ai-utils";
 
 async function main(query) {
   try {

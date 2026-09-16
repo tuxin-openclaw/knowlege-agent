@@ -1,4 +1,4 @@
-import { client, COLLECTION_NAME } from "./shared/index.mjs";
+import { client, COLLECTION_NAME } from "@knowledge/ai-utils";
 
 async function remove(id) {
   client.delete({

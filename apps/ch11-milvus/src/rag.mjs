@@ -7,7 +7,7 @@ import {
   loadCollection,
   getEmbedding,
   COLLECTION_NAME,
-} from "./shared/index.mjs";
+} from "@knowledge/ai-utils";
 
 /**
  * 从 Milvus 中检索相关日记

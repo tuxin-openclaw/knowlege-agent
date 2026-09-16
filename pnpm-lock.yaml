@@ -158,6 +158,29 @@ importers:
       '@knowledge/course-utils':
         specifier: workspace:*
         version: link:../../packages/course-utils
+      '@knowledge/ai-utils':
+        specifier: workspace:*
+        version: link:../../packages/ai-utils
+      '@zilliz/milvus2-sdk-node':
+        specifier: ^3.0.5
+        version: 3.0.5
+      chalk:
+        specifier: ^6.0.0
+        version: 6.0.0
+
+  apps/ch12-ebook-assistant: {}
+
+  packages/course-utils:
+    dependencies:
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+
+  packages/ai-utils:
+    dependencies:
+      '@knowledge/course-utils':
+        specifier: workspace:*
+        version: link:../course-utils
       '@langchain/ollama':
         specifier: ^1.3.0
         version: 1.3.0(@langchain/core@1.2.11(@opentelemetry/api@1.9.1)(openai@7.13.0(@aws-sdk/credential-provider-node@3.972.83)(@smithy/signature-v4@5.7.3)(undici@7.29.1)(ws@8.21.3)(zod@4.6.2))(ws@8.21.3))
@@ -170,12 +193,6 @@ importers:
       chalk:
         specifier: ^6.0.0
         version: 6.0.0
-
-  packages/course-utils:
-    dependencies:
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
 
 packages:
 

@@ -30,9 +30,6 @@ export function getEmbedding(text) {
   return embeddings.embedQuery(text);
 }
 
-/**
- * 连接 Milvus 数据库
- */
 export async function connectMilvus() {
   console.log("Milvus 连接中...");
   const res = await client.connectPromise;
@@ -40,9 +37,6 @@ export async function connectMilvus() {
   return res;
 }
 
-/**
- * 加载 Milvus 集合
- */
 export async function loadCollection() {
   console.log("\n加载合集...");
   const res = await client.loadCollection({ collection_name: COLLECTION_NAME });

@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./console": "./src/console.mjs",
     "./env": "./src/env.mjs",
     "./mcp-config": "./src/mcp-config.mjs"
   },
   "scripts": {
-    "check": "node --check src/env.mjs && node --check src/mcp-config.mjs",
+    "check": "node --check src/console.mjs && node --check src/env.mjs && node --check src/mcp-config.mjs",
     "format:check": "prettier --check src package.json"
   },
   "dependencies": {

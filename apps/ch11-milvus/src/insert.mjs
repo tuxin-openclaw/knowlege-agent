@@ -7,7 +7,7 @@ import {
   connectMilvus,
   getEmbedding,
   VECTOR_DIM,
-} from "./shared/index.mjs";
+} from "@knowledge/ai-utils";
 
 async function main() {
   try {
