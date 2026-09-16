@@ -27,3 +27,9 @@
 [下载 milvus docker 配置](https://github.com/milvus-io/milvus/releases)
 
 [安装 Milvus GUI 工具](https://github.com/zilliztech/attu/releases)
+
+## 记忆管理
+
+- 截断：根据 token 数量来保留最近的 message
+- 总结：调用大模型对之前的 message 生成一个摘要
+- 检索：将 message 存入向量数据库进行检索

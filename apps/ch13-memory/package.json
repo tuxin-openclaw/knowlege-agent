@@ -1,0 +1,27 @@
+{
+  "name": "ch13-memory",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node src/memory-test.mjs",
+    "persist": "node src/memory-persist.mjs",
+    "persist2": "node src/memory-persist2.mjs",
+    "truncate": "node src/memory-truncate.mjs",
+    "summary": "node src/memory-summary.mjs",
+    "summary-tokens": "node src/memory-summary-tokens.mjs",
+    "insert": "node src/insert-conversations.mjs",
+    "rag": "node src/memory-rag.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@knowledge/ai-utils": "workspace:*",
+    "@langchain/community": "^1.1.29",
+    "@langchain/core": "^1.2.11",
+    "@zilliz/milvus2-sdk-node": "^3.0.5",
+    "js-tiktoken": "^1.0.21"
+  }
+}
