@@ -25,3 +25,5 @@
 > Milvus 根据语义匹配查询，可以用自然语言来检索
 
 [下载 milvus docker 配置](https://github.com/milvus-io/milvus/releases)
+
+[安装 Milvus GUI 工具](https://github.com/zilliztech/attu/releases)
