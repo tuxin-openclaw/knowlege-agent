@@ -1,0 +1,17 @@
+{
+  "name": "ch14-output-parser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@langchain/core": "^1.2.11",
+    "chalk": "^6.0.0",
+    "zod": "^4.6.2",
+    "@knowledge/ai-utils": "workspace:*",
+    "@knowledge/course-utils": "workspace:*"
+  }
+}
