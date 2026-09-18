@@ -22,8 +22,10 @@ export const model = new ChatOpenAI({
   },
 });
 
+export const MILVUS_ADDRESS = "localhost:19530";
+
 export const client = new MilvusClient({
-  address: "localhost:19530",
+  address: MILVUS_ADDRESS,
 });
 
 export function getEmbedding(text) {
