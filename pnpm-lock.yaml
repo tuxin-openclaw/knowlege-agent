@@ -282,6 +282,18 @@ importers:
         specifier: ^17.4.2
         version: 17.4.2
 
+  apps/ch17-runnable:
+    dependencies:
+      '@knowledge/ai-utils':
+        specifier: workspace:*
+        version: link:../../packages/ai-utils
+      '@langchain/core':
+        specifier: ^1.2.11
+        version: 1.2.11(@opentelemetry/api@1.9.1)(openai@7.13.0(@aws-sdk/credential-provider-node@3.972.83)(@smithy/signature-v4@5.7.3)(undici@7.29.1)(ws@8.21.3)(zod@4.6.2))(ws@8.21.3)
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.2
+
   packages/ai-utils:
     dependencies:
       '@knowledge/course-utils':
@@ -3367,7 +3379,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.20.0(debug@4.3.4))
+      retry-axios: 2.6.0(axios@1.20.0)
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -3722,7 +3734,7 @@ snapshots:
 
   requires-port@1.0.0: {}
 
-  retry-axios@2.6.0(axios@1.20.0(debug@4.3.4)):
+  retry-axios@2.6.0(axios@1.20.0):
     dependencies:
       axios: 1.20.0(debug@4.3.4)
 
