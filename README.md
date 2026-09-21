@@ -93,3 +93,10 @@
      - withFallbacks
      - withConfig
    - callbacks: chain.invoke(prompt, { callbacks: [cb] })
+
+## 定时任务
+
+OpenClaw两种定时任务
+
+1. 定时启动一个 Agent Loop 来执行定时任务
+2. 心跳机制定期主动做一些事情
