@@ -18,7 +18,7 @@
 ## 知识库的 loader 和 splitter
 
 - loader：把各种知识来源通过 loader 转化为文档存入知识库
-- splitter：文档很大时，需要拆分文档
+- splitter：文档很大时，需要拆分文档。一般用 RecursiveCharacterTextSplitter，其他 splitter 都可以通过它来实现。
 
 ## 向量数据库 Milvus
 
