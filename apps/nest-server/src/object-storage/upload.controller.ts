@@ -1,12 +1,10 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Post,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   MAX_UPLOAD_BYTES,
   ObjectStorageService,
@@ -21,15 +19,22 @@ export class UploadController {
     return this.storage.getStatus();
   }
 
-  @Post()
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 0 },
-    }),
-  )
-  upload(@UploadedFile() file?: Express.Multer.File) {
-    if (!file || file.size === 0)
-      throw new BadRequestException('请选择一个非空文件');
-    return this.storage.upload(file);
+  @Post('presign')
+  createUpload(
+    @Body() body: { name?: string; size?: number; contentType?: string },
+  ) {
+    if (
+      typeof body.name !== 'string' ||
+      typeof body.size !== 'number' ||
+      body.size <= 0 ||
+      body.size > MAX_UPLOAD_BYTES
+    ) {
+      throw new BadRequestException('文件必须非空且不超过 10 MB');
+    }
+    return this.storage.createUpload({
+      name: body.name,
+      size: body.size,
+      contentType: typeof body.contentType === 'string' ? body.contentType : '',
+    });
   }
 }

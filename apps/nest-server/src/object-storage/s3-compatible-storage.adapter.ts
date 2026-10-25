@@ -6,10 +6,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type {
-  ObjectStorageAdapter,
-  StoredObjectInput,
-} from './object-storage.types.js';
+import type { ObjectStorageAdapter } from './object-storage.types.js';
 
 @Injectable()
 export class S3CompatibleStorageAdapter implements ObjectStorageAdapter {
@@ -17,18 +14,16 @@ export class S3CompatibleStorageAdapter implements ObjectStorageAdapter {
 
   constructor(private readonly config: ConfigService) {}
 
-  async upload(input: StoredObjectInput) {
-    const result = await this.getClient().send(
+  createUploadUrl(key: string, contentType: string, expiresIn: number) {
+    return getSignedUrl(
+      this.getClient(),
       new PutObjectCommand({
         Bucket: this.config.getOrThrow<string>('OBJECT_STORAGE_BUCKET'),
-        Key: input.key,
-        Body: input.body,
-        ContentLength: input.size,
-        ContentType: input.contentType,
-        ContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(input.fileName)}`,
+        Key: key,
+        ContentType: contentType,
       }),
+      { expiresIn },
     );
-    return result.ETag;
   }
 
   createDownloadUrl(key: string, expiresIn: number) {

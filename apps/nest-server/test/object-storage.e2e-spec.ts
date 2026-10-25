@@ -6,7 +6,7 @@ import { ObjectStorageService } from '../src/object-storage/object-storage.servi
 
 describe('upload endpoint', () => {
   let app: INestApplication;
-  const upload = vi.fn().mockResolvedValue({ key: 'test.txt' });
+  const createUpload = vi.fn().mockResolvedValue({ key: 'test.txt' });
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -16,7 +16,7 @@ describe('upload endpoint', () => {
           configured: false,
           missing: ['OBJECT_STORAGE_BUCKET'],
         }),
-        upload,
+        createUpload,
       })
       .compile();
     app = module.createNestApplication();
@@ -27,7 +27,7 @@ describe('upload endpoint', () => {
     await app.close();
   });
 
-  beforeEach(() => upload.mockClear());
+  beforeEach(() => createUpload.mockClear());
 
   it('exposes configuration status', async () => {
     const result = await request(app.getHttpServer())
@@ -39,33 +39,19 @@ describe('upload endpoint', () => {
     });
   });
 
-  it('accepts multipart file contents', async () => {
+  it('issues direct upload authorization', async () => {
     await request(app.getHttpServer())
-      .post('/api/uploads')
-      .attach('file', Buffer.from('hello'), 'test.txt')
+      .post('/api/uploads/presign')
+      .send({ name: 'test.txt', size: 5, contentType: 'text/plain' })
       .expect(201);
-    expect(upload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        buffer: Buffer.from('hello'),
-        size: 5,
-      }),
-    );
+    expect(createUpload).toHaveBeenCalledWith({ name: 'test.txt', size: 5, contentType: 'text/plain' });
   });
 
-  it('rejects missing or empty files before accessing storage', async () => {
-    await request(app.getHttpServer()).post('/api/uploads').expect(400);
+  it('rejects invalid sizes before accessing storage', async () => {
     await request(app.getHttpServer())
-      .post('/api/uploads')
-      .attach('file', Buffer.alloc(0), 'empty.txt')
+      .post('/api/uploads/presign')
+      .send({ name: 'empty.txt', size: 0 })
       .expect(400);
-    expect(upload).not.toHaveBeenCalled();
-  });
-
-  it('rejects files larger than 10 MB before accessing storage', async () => {
-    await request(app.getHttpServer())
-      .post('/api/uploads')
-      .attach('file', Buffer.alloc(10 * 1024 * 1024 + 1), 'large.txt')
-      .expect(413);
-    expect(upload).not.toHaveBeenCalled();
+    expect(createUpload).not.toHaveBeenCalled();
   });
 });

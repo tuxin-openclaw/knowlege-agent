@@ -12,7 +12,9 @@ interface UploadResult {
   key: string;
   name: string;
   size: number;
-  etag: string;
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+  uploadExpiresIn: number;
   url: string;
   expiresIn: number;
 }
@@ -64,11 +66,14 @@ function App() {
     }
     setUploading(true);
     try {
-      const data = new FormData();
-      data.append("file", file);
-      const response = await fetch("/api/uploads", {
+      const response = await fetch("/api/uploads/presign", {
         method: "POST",
-        body: data,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type || "application/octet-stream",
+        }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -79,6 +84,14 @@ function App() {
               ? payload.message.join("；")
               : payload.message || "上传失败，请稍后再试",
         );
+      }
+      const uploadResponse = await fetch(payload.uploadUrl, {
+        method: "PUT",
+        headers: payload.uploadHeaders,
+        body: file,
+      });
+      if (!uploadResponse.ok) {
+        throw new Error("COS 上传失败，请检查存储桶 CORS 配置后重试");
       }
       setResult(payload);
     } catch (error) {
@@ -165,9 +178,9 @@ function App() {
                 </dd>
               </div>
               <div>
-                <dt>ETag</dt>
+                <dt>上传方式</dt>
                 <dd>
-                  <code>{result.etag}</code>
+                  浏览器直传 COS
                 </dd>
               </div>
             </dl>
@@ -180,7 +193,7 @@ function App() {
               下载文件验证 ↗
             </a>
             <p className="hint">
-              下载链接 {result.expiresIn / 60} 分钟内有效，文件保存在存储桶中。
+              上传凭证 {result.uploadExpiresIn / 60} 分钟内有效；下载链接 {result.expiresIn / 60} 分钟内有效。
             </p>
           </section>
         )}

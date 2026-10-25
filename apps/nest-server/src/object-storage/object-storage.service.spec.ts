@@ -1,17 +1,13 @@
 import {
   BadGatewayException,
+  BadRequestException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ObjectStorageAdapter } from './object-storage.types.js';
 import { ObjectStorageService } from './object-storage.service.js';
 
-const file = {
-  originalname: '../../demo.txt',
-  mimetype: 'text/plain',
-  size: 5,
-  buffer: Buffer.from('hello'),
-} as Express.Multer.File;
+const file = { name: '../../demo.txt', contentType: 'text/plain', size: 5 };
 
 describe('ObjectStorageService', () => {
   const configuration = {
@@ -21,13 +17,13 @@ describe('ObjectStorageService', () => {
     OBJECT_STORAGE_REGION: 'ap-guangzhou',
   };
   const adapter: ObjectStorageAdapter = {
-    upload: vi.fn().mockResolvedValue('test-etag'),
+    createUploadUrl: vi.fn().mockResolvedValue('https://example.test/put'),
     createDownloadUrl: vi.fn().mockResolvedValue('https://example.test/signed'),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(adapter.upload).mockResolvedValue('test-etag');
+    vi.mocked(adapter.createUploadUrl).mockResolvedValue('https://example.test/put');
     vi.mocked(adapter.createDownloadUrl).mockResolvedValue(
       'https://example.test/signed',
     );
@@ -39,42 +35,47 @@ describe('ObjectStorageService', () => {
       configured: false,
       missing: expect.arrayContaining(['OBJECT_STORAGE_BUCKET']),
     });
-    await expect(service.upload(file)).rejects.toBeInstanceOf(
+    await expect(service.createUpload(file)).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
-    expect(adapter.upload).not.toHaveBeenCalled();
+    expect(adapter.createUploadUrl).not.toHaveBeenCalled();
   });
 
-  it('stores a generated object key and creates a five-minute download URL', async () => {
+  it('creates temporary direct-upload and download URLs', async () => {
     const service = new ObjectStorageService(
       new ConfigService(configuration),
       adapter,
     );
-    const result = await service.upload(file);
-    expect(adapter.upload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: expect.stringMatching(
-          /^upload-tests\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.txt$/,
-        ),
-        body: file.buffer,
-        size: file.size,
-        contentType: file.mimetype,
-      }),
+    const result = await service.createUpload(file);
+    expect(adapter.createUploadUrl).toHaveBeenCalledWith(
+      expect.stringMatching(/^upload-tests\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.txt$/),
+      'text/plain',
+      300,
     );
     expect(adapter.createDownloadUrl).toHaveBeenCalledWith(result.key, 300);
-    expect(result.etag).toBe('test-etag');
+    expect(result.uploadUrl).toBe('https://example.test/put');
     expect(result.url).toBe('https://example.test/signed');
   });
 
+  it('rejects files larger than the configured limit', async () => {
+    const service = new ObjectStorageService(
+      new ConfigService(configuration),
+      adapter,
+    );
+    await expect(service.createUpload({ ...file, size: 10 * 1024 * 1024 + 1 }))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(adapter.createUploadUrl).not.toHaveBeenCalled();
+  });
+
   it('converts adapter failures into an actionable error', async () => {
-    vi.mocked(adapter.upload).mockRejectedValue(
+    vi.mocked(adapter.createUploadUrl).mockRejectedValue(
       new Error('private adapter details'),
     );
     const service = new ObjectStorageService(
       new ConfigService(configuration),
       adapter,
     );
-    await expect(service.upload(file)).rejects.toBeInstanceOf(
+    await expect(service.createUpload(file)).rejects.toBeInstanceOf(
       BadGatewayException,
     );
     expect(adapter.createDownloadUrl).not.toHaveBeenCalled();

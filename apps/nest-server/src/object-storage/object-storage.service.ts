@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  BadRequestException,
   Inject,
   Injectable,
   Logger,
@@ -14,6 +15,7 @@ import {
 } from './object-storage.types.js';
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const UPLOAD_URL_EXPIRES_SECONDS = 300;
 const DOWNLOAD_EXPIRES_SECONDS = 300;
 const REQUIRED_KEYS = [
   'OBJECT_STORAGE_ACCESS_KEY_ID',
@@ -43,7 +45,7 @@ export class ObjectStorageService {
     };
   }
 
-  async upload(file: Express.Multer.File) {
+  async createUpload(file: { name: string; size: number; contentType: string }) {
     const status = this.getStatus();
     if (!status.configured) {
       throw new ServiceUnavailableException(
@@ -51,28 +53,33 @@ export class ObjectStorageService {
       );
     }
 
-    const extension = extname(file.originalname)
+    if (!file.name.trim() || file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+      throw new BadRequestException('文件必须非空且不超过 10 MB');
+    }
+    const extension = extname(file.name)
       .replace(/[^a-zA-Z0-9.]/g, '')
       .slice(0, 16);
     const key = `upload-tests/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${extension}`;
     try {
-      const etag = await this.adapter.upload({
+      const contentType = file.contentType || 'application/octet-stream';
+      const uploadUrl = await this.adapter.createUploadUrl(
         key,
-        body: file.buffer,
-        size: file.size,
-        contentType: file.mimetype || 'application/octet-stream',
-        fileName: file.originalname,
-      });
+        contentType,
+        UPLOAD_URL_EXPIRES_SECONDS,
+      );
       const url = await this.adapter.createDownloadUrl(
         key,
         DOWNLOAD_EXPIRES_SECONDS,
       );
       return {
         key,
-        name: file.originalname,
+        name: file.name,
         size: file.size,
-        etag,
+        contentType,
+        uploadUrl,
+        uploadHeaders: { 'Content-Type': contentType },
         url,
+        uploadExpiresIn: UPLOAD_URL_EXPIRES_SECONDS,
         expiresIn: DOWNLOAD_EXPIRES_SECONDS,
       };
     } catch {
