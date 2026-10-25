@@ -4,7 +4,7 @@
 - Tool
 - MCP：可跨进程调用的 Tool
 - Prompt Template：组件化管理 prompt
-- 语音交互
+- 语音交互：ASR + 流式 TTS 
 
 ## RAG
 - RAG：检索增强生成
@@ -26,10 +26,12 @@
 - Runnable：将代码步骤逻辑组装成 chain
 - [LangSmith 全链路观测](LangSmith-全链路观测.md)
 - [DeepAgents](DeepAgents.md)
+- [Agent 的对象存储方案：MinIO、RustFS、阿里云OSS](Agent-的对象存储方案.md)
 
 ## 自动化
 - 定时任务
 
 ## 实战
 - [多Agent架构的深度调研助手](多Agent架构的深度调研助手.md)
+- 多模态与 OSS 前端直传实战：AI 画板
 
