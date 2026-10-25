@@ -15,8 +15,8 @@
           system-ui,
           -apple-system,
           BlinkMacSystemFont,
-          'SF Pro Text',
-          'Segoe UI',
+          "SF Pro Text",
+          "Segoe UI",
           sans-serif;
         display: flex;
         align-items: center;
@@ -106,7 +106,7 @@
         color: #e5e7eb;
         font-family:
           ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          'Liberation Mono', 'Courier New', monospace;
+          "Liberation Mono", "Courier New", monospace;
         white-space: pre-wrap;
         max-height: 360px;
         overflow-y: auto;
@@ -131,12 +131,12 @@
     </div>
 
     <script>
-      const sendBtn = document.getElementById('sendBtn');
-      const queryInput = document.getElementById('query');
-      const outputEl = document.getElementById('output');
-      const statusEl = document.getElementById('status');
+      const sendBtn = document.getElementById("sendBtn");
+      const queryInput = document.getElementById("query");
+      const outputEl = document.getElementById("output");
+      const statusEl = document.getElementById("status");
       queryInput.value =
-        '2026年的ai相关自选，整理后生成一个精美的html发送到邮箱iamtuxin@foxmail.com';
+        "2026年的ai相关自选，整理后生成一个精美的html发送到邮箱iamtuxin@foxmail.com";
 
       let es = null;
 
@@ -152,20 +152,20 @@
       sendBtn.onclick = () => {
         const query = queryInput.value.trim();
         if (!query) {
-          alert('请输入问题');
+          alert("请输入问题");
           return;
         }
 
         closeEventSource();
-        outputEl.textContent = '';
+        outputEl.textContent = "";
         sendBtn.disabled = true;
-        statusEl.textContent = '状态：连接中…';
+        statusEl.textContent = "状态：连接中…";
 
         const url = `/ai/chat/stream?query=${encodeURIComponent(query)}`;
         es = new EventSource(url);
 
         es.onopen = () => {
-          statusEl.textContent = '状态：已连接，流式接收中…';
+          statusEl.textContent = "状态：已连接，流式接收中…";
         };
 
         es.onmessage = (event) => {
@@ -174,12 +174,12 @@
         };
 
         es.onerror = () => {
-          statusEl.textContent = '状态：连接结束或发生错误';
+          statusEl.textContent = "状态：连接结束或发生错误";
           closeEventSource();
         };
       };
 
-      window.addEventListener('beforeunload', closeEventSource);
+      window.addEventListener("beforeunload", closeEventSource);
     </script>
   </body>
 </html>
