@@ -7,15 +7,18 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CosService, MAX_UPLOAD_BYTES } from './cos.service.js';
+import {
+  MAX_UPLOAD_BYTES,
+  ObjectStorageService,
+} from './object-storage.service.js';
 
 @Controller('api/uploads')
-export class CosController {
-  constructor(private readonly cosService: CosService) {}
+export class UploadController {
+  constructor(private readonly storage: ObjectStorageService) {}
 
   @Get('config')
   getConfig() {
-    return this.cosService.getStatus();
+    return this.storage.getStatus();
   }
 
   @Post()
@@ -25,9 +28,8 @@ export class CosController {
     }),
   )
   upload(@UploadedFile() file?: Express.Multer.File) {
-    if (!file || file.size === 0) {
+    if (!file || file.size === 0)
       throw new BadRequestException('请选择一个非空文件');
-    }
-    return this.cosService.upload(file);
+    return this.storage.upload(file);
   }
 }

@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { fileURLToPath } from 'node:url';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { CosModule } from './cos/cos.module.js';
+import { ObjectStorageModule } from './object-storage/object-storage.module.js';
 
 @Module({
   imports: [
@@ -11,7 +11,7 @@ import { CosModule } from './cos/cos.module.js';
       isGlobal: true,
       envFilePath: fileURLToPath(new URL('../.env', import.meta.url)),
     }),
-    CosModule,
+    ObjectStorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

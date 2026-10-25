@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
-import { CosService } from '../src/cos/cos.service.js';
+import { ObjectStorageService } from '../src/object-storage/object-storage.service.js';
 
 describe('upload endpoint', () => {
   let app: INestApplication;
@@ -10,9 +10,12 @@ describe('upload endpoint', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(CosService)
+      .overrideProvider(ObjectStorageService)
       .useValue({
-        getStatus: () => ({ configured: false, missing: ['COS_BUCKET'] }),
+        getStatus: () => ({
+          configured: false,
+          missing: ['OBJECT_STORAGE_BUCKET'],
+        }),
         upload,
       })
       .compile();
@@ -30,7 +33,10 @@ describe('upload endpoint', () => {
     const result = await request(app.getHttpServer())
       .get('/api/uploads/config')
       .expect(200);
-    expect(result.body).toEqual({ configured: false, missing: ['COS_BUCKET'] });
+    expect(result.body).toEqual({
+      configured: false,
+      missing: ['OBJECT_STORAGE_BUCKET'],
+    });
   });
 
   it('accepts multipart file contents', async () => {
@@ -46,7 +52,7 @@ describe('upload endpoint', () => {
     );
   });
 
-  it('rejects missing or empty files before accessing COS', async () => {
+  it('rejects missing or empty files before accessing storage', async () => {
     await request(app.getHttpServer()).post('/api/uploads').expect(400);
     await request(app.getHttpServer())
       .post('/api/uploads')
@@ -55,7 +61,7 @@ describe('upload endpoint', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it('rejects files larger than 10 MB before accessing COS', async () => {
+  it('rejects files larger than 10 MB before accessing storage', async () => {
     await request(app.getHttpServer())
       .post('/api/uploads')
       .attach('file', Buffer.alloc(10 * 1024 * 1024 + 1), 'large.txt')
