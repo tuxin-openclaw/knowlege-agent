@@ -38,8 +38,8 @@ docker compose ps
 
 默认连接配置：
 
-- PostgreSQL：`postgresql://postgres:postgres@localhost:5432/knowlege_agent`
-- Redis：`redis://localhost:6379`
+- PostgreSQL：`postgresql://postgres:postgres@localhost:5433/knowlege_agent`
+- Redis：`redis://localhost:6380`
 
 可在根目录已有的 `.env` 中添加 `POSTGRES_USER`、`POSTGRES_PASSWORD`、
 `POSTGRES_DB`、`POSTGRES_PORT`、`REDIS_PORT` 覆盖默认值。

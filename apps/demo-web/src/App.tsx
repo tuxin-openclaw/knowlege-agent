@@ -1,205 +1,489 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import "./App.css";
+import imageApi from "@/api/images";
+import type { Generation } from "@/api/images";
+import uploadApi from "@/api/uploads";
+import "@/App.css";
 
-interface UploadConfig {
-  configured: boolean;
-  missing: string[];
-  maxUploadBytes: number;
-}
-
-interface UploadResult {
+interface Reference {
   key: string;
-  name: string;
-  size: number;
-  uploadUrl: string;
-  uploadHeaders: Record<string, string>;
-  uploadExpiresIn: number;
   url: string;
-  expiresIn: number;
+  name: string;
 }
 
-function formatSize(size: number) {
-  return size < 1024 * 1024
-    ? `${(size / 1024).toFixed(1)} KB`
-    : `${(size / 1024 / 1024).toFixed(1)} MB`;
-}
+const statusLabels = {
+  queued: "等待生成",
+  generating: "正在绘制",
+  succeeded: "已完成",
+  failed: "生成失败",
+};
+const examples = [
+  "雨后街角的咖啡店，暖色灯光，胶片摄影",
+  "一只在月球散步的橘猫，童话插画",
+  "把参考图变成柔和的水彩画，保留主体细节",
+];
 
 function App() {
-  const [config, setConfig] = useState<UploadConfig | null>(null);
+  const [tab, setTab] = useState<"create" | "history">("create");
+  const [prompt, setPrompt] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [localPreview, setLocalPreview] = useState("");
+  const [reference, setReference] = useState<Reference | null>(null);
+  const [items, setItems] = useState<Generation[]>([]);
+  const [cursor, setCursor] = useState<string | null | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [connectionError, setConnectionError] = useState("");
-  const [result, setResult] = useState<UploadResult | null>(null);
+  const [notice, setNotice] = useState("");
+  const [selected, setSelected] = useState<Generation | null>(null);
+  const pending = items.filter(
+    (item) => item.status === "queued" || item.status === "generating",
+  ).length;
+  const input = useRef<HTMLInputElement>(null);
+  const promptInput = useRef<HTMLTextAreaElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    async function loadConfig() {
-      try {
-        const response = await fetch("/api/uploads/config", {
-          signal: controller.signal,
-        });
-        if (!response.ok)
-          throw new Error("无法连接上传服务，请确认 Nest 服务已启动");
-        setConfig(await response.json());
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setError(error instanceof Error ? error.message : "无法连接上传服务");
-        }
-      }
+  const refresh = useCallback(async () => {
+    try {
+      const page = await imageApi.getHistory();
+      if (!page) return;
+      setItems((previous) => {
+        const merged = new Map(previous.map((item) => [item.id, item]));
+        for (const item of page.items) merged.set(item.id, item);
+        return [...merged.values()].sort(
+          (a, b) =>
+            b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id),
+        );
+      });
+      setCursor((previous) =>
+        previous === undefined ? page.nextCursor : previous,
+      );
+    } finally {
+      setLoading(false);
     }
-    void loadConfig();
-    return () => controller.abort();
   }, []);
 
-  async function upload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file || !config?.configured || uploading) return;
-    setError("");
-    setResult(null);
-    if (file.size === 0 || file.size > config.maxUploadBytes) {
-      setConnectionError(
-        `请选择非空且不超过 ${formatSize(config.maxUploadBytes)} 的文件`,
-      );
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const interval = pending > 0 ? 5000 : 30000;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh();
+    }, interval);
+    const onVisible = () => {
+      if (!document.hidden) void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [pending, refresh]);
+
+  useEffect(() => {
+    return () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
+
+  useEffect(() => {
+    if (selected) dialog.current?.showModal();
+    else dialog.current?.close();
+  }, [selected]);
+
+  function chooseFile(chosen?: File) {
+    if (!chosen) return;
+    if (
+      !["image/png", "image/jpeg", "image/webp"].includes(chosen.type) ||
+      chosen.size === 0 ||
+      chosen.size > 10 * 1024 * 1024
+    ) {
+      setError("请选择不超过 10 MB 的 PNG、JPEG 或 WebP 图片");
       return;
     }
-    setUploading(true);
+    setError("");
+    setFile(chosen);
+    setLocalPreview(URL.createObjectURL(chosen));
+    setReference(null);
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!prompt.trim() || submitting) return;
+    setSubmitting(true);
+    setError("");
+    setNotice("");
     try {
-      const response = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: file.name,
-          size: file.size,
-          contentType: file.type || "application/octet-stream",
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          response.status === 413
-            ? "文件超过 10 MB，请选择较小的文件"
-            : Array.isArray(payload.message)
-              ? payload.message.join("；")
-              : payload.message || "上传失败，请稍后再试",
-        );
+      let key = reference?.key;
+      if (file) {
+        const upload = await uploadApi.prepare(file);
+        if (!upload) return;
+        const uploaded = await uploadApi.upload(file, upload);
+        if (!uploaded) return;
+        key = upload.key;
+        setReference({ key, url: upload.url, name: file.name });
+        setFile(null);
+        setLocalPreview("");
       }
-      const uploadResponse = await fetch(payload.uploadUrl, {
-        method: "PUT",
-        headers: payload.uploadHeaders,
-        body: file,
-      });
-      if (!uploadResponse.ok) {
-        throw new Error("COS 上传失败，请检查存储桶 CORS 配置后重试");
-      }
-      setResult(payload);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "上传失败，请稍后再试");
+      const job = await imageApi.create(prompt.trim(), key);
+      if (!job) return;
+      setItems((previous) => [
+        job,
+        ...previous.filter((item) => item.id !== job.id),
+      ]);
+      setNotice("已加入生成队列，可在作品中查看进度");
+      setTab("history");
+      void refresh();
     } finally {
-      setUploading(false);
+      setSubmitting(false);
     }
   }
 
+  async function loadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await imageApi.getHistory(cursor);
+      if (!page) return;
+      setItems((previous) => [
+        ...previous,
+        ...page.items.filter(
+          (item) => !previous.some((old) => old.id === item.id),
+        ),
+      ]);
+      setCursor(page.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function reuse(item: Generation) {
+    setPrompt(item.prompt);
+    setFile(null);
+    setLocalPreview("");
+    setReference(
+      item.referenceKey && item.referenceUrl
+        ? { key: item.referenceKey, url: item.referenceUrl, name: "历史参考图" }
+        : null,
+    );
+    setError("");
+    setNotice("");
+    setSelected(null);
+    setTab("create");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.setTimeout(() => promptInput.current?.focus(), 100);
+  }
+
+  const preview = file ? localPreview : reference?.url;
+
   return (
-    <main className="upload-page">
-      <header>
-        <span className="eyebrow">腾讯云 COS</span>
-        <h1>文件上传测试</h1>
-        <p>选择一个文件，上传到对象存储，再下载确认内容。</p>
+    <div className="studio">
+      <header className="studio-header">
+        <a className="brand" href="/" aria-label="灵感成像首页">
+          <span className="brand-symbol">✳</span> 灵感成像
+        </a>
+        <span className="header-tag">AI IMAGE STUDIO</span>
       </header>
-
-      <section className="upload-card" aria-label="上传文件">
-        <div className="card-heading">
-          <h2>上传文件</h2>
-          <span className={`status ${config?.configured ? "ready" : ""}`}>
-            {config
-              ? config.configured
-                ? "服务已配置"
-                : "等待配置"
-              : connectionError
-                ? "服务未连接"
-                : "连接服务中"}
-          </span>
-        </div>
-
-        {config && !config.configured && (
-          <p className="notice" role="status">
-            请填写 apps/nest-server/.env 中的 {config.missing.join("、")}
-            ，重启服务后刷新页面。
-          </p>
-        )}
-
-        <form onSubmit={upload}>
-          <label className="file-picker" htmlFor="upload-file">
-            <strong>{file ? file.name : "选择要上传的文件"}</strong>
-            <span>{file ? formatSize(file.size) : "单个文件，最大 10 MB"}</span>
-            <input
-              id="upload-file"
-              type="file"
-              disabled={uploading}
-              onChange={(event) => {
-                setFile(event.target.files?.[0] ?? null);
-                setResult(null);
-                setError("");
-              }}
-            />
-          </label>
+      <main>
+        <section className="intro">
+          <span className="eyebrow">让想象，变得可见</span>
+          <h1>
+            从一句灵感，
+            <br />
+            到一张新作品。
+          </h1>
+          <p>写下画面，或加一张参考图，让 AI 接着你的想象创作。</p>
+        </section>
+        <nav className="tabs" aria-label="工作台">
           <button
-            type="submit"
-            disabled={!file || uploading || !config?.configured}
+            className={tab === "create" ? "active" : ""}
+            onClick={() => setTab("create")}
           >
-            {uploading ? "正在上传至 COS…" : "上传到 COS"}
+            开始创作
           </button>
-        </form>
-
-        {(error || connectionError) && (
-          <p className="error" role="alert">
-            {error || connectionError}
-          </p>
-        )}
-
-        {result && (
-          <section className="upload-result" aria-live="polite">
-            <h2>上传成功</h2>
-            <dl>
-              <div>
-                <dt>文件</dt>
-                <dd>{result.name}</dd>
+          <button
+            className={tab === "history" ? "active" : ""}
+            onClick={() => setTab("history")}
+          >
+            我的作品 {pending > 0 && <span className="count">{pending}</span>}
+          </button>
+        </nav>
+        <div className="workspace">
+          <section
+            className={`composer panel ${tab !== "create" ? "mobile-hidden" : ""}`}
+            aria-label="图片创作"
+          >
+            <div className="section-title">
+              <h2>描述你的画面</h2>
+              <span className="step">01 / CREATE</span>
+            </div>
+            <form onSubmit={submit}>
+              <label htmlFor="prompt" className="sr-only">
+                图片描述
+              </label>
+              <textarea
+                id="prompt"
+                ref={promptInput}
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                maxLength={4000}
+                required
+                disabled={submitting}
+                placeholder="想画些什么？描述主体、风格、光线与氛围…"
+                rows={5}
+              />
+              <div className="prompt-meta">
+                <span>细节越具体，画面越贴近想象</span>
+                <span>{prompt.length}/4000</span>
               </div>
-              <div>
-                <dt>大小</dt>
-                <dd>{formatSize(result.size)}</dd>
+              <div className="inspirations" aria-label="灵感示例">
+                {examples.map((example, index) => (
+                  <button
+                    key={example}
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => setPrompt(example)}
+                  >
+                    {["胶片街景", "童话插画", "水彩改绘"][index]} ↗
+                  </button>
+                ))}
               </div>
-              <div>
-                <dt>对象路径</dt>
-                <dd>
-                  <code>{result.key}</code>
-                </dd>
+              <div className="reference-heading">
+                <label htmlFor="reference">参考图片</label>
+                <span>可选 · 图文一起创作</span>
               </div>
-              <div>
-                <dt>上传方式</dt>
-                <dd>
-                  浏览器直传 COS
-                </dd>
-              </div>
-            </dl>
-            <a
-              className="download-link"
-              href={result.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              下载文件验证 ↗
-            </a>
-            <p className="hint">
-              上传凭证 {result.uploadExpiresIn / 60} 分钟内有效；下载链接 {result.expiresIn / 60} 分钟内有效。
-            </p>
+              <input
+                ref={input}
+                id="reference"
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={submitting}
+                onChange={(event) => {
+                  chooseFile(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+              {preview ? (
+                <div className="reference-preview">
+                  <img src={preview} alt="已选择的参考图片" />
+                  <div>
+                    <strong>{file?.name || reference?.name}</strong>
+                    <button
+                      className="text-button"
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => input.current?.click()}
+                    >
+                      更换图片
+                    </button>
+                  </div>
+                  <button
+                    className="remove-button"
+                    type="button"
+                    aria-label="移除参考图片"
+                    disabled={submitting}
+                    onClick={() => {
+                      setFile(null);
+                      setLocalPreview("");
+                      setReference(null);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="reference-picker"
+                  disabled={submitting}
+                  onClick={() => input.current?.click()}
+                >
+                  <span className="upload-plus">＋</span>
+                  <strong>添加参考图</strong>
+                  <span>相册选图 · PNG / JPEG / WebP · 最大 10 MB</span>
+                </button>
+              )}
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              {notice && (
+                <p className="success" role="status">
+                  {notice}
+                </p>
+              )}
+              <button
+                className="generate-button"
+                disabled={!prompt.trim() || submitting}
+                type="submit"
+              >
+                {submitting ? (
+                  <>
+                    <span className="spinner" />
+                    正在提交…
+                  </>
+                ) : (
+                  <>
+                    ✧ &nbsp; {reference || file ? "结合参考图生成" : "生成图片"}
+                  </>
+                )}
+              </button>
+              <p className="composer-hint">生成结果会自动保存在作品中</p>
+            </form>
           </section>
+          <section
+            className={`history ${tab !== "history" ? "mobile-hidden" : ""}`}
+            aria-label="生图历史"
+          >
+            <div className="section-title">
+              <div>
+                <span className="eyebrow">YOUR COLLECTION</span>
+                <h2>每一次灵感，都有迹可循</h2>
+              </div>
+              <button
+                className="refresh-button"
+                onClick={() => void refresh()}
+                aria-label="刷新作品"
+              >
+                ↻
+              </button>
+            </div>
+            {loading ? (
+              <div className="empty-state">
+                <span className="spinner" />
+                <p>正在加载作品…</p>
+              </div>
+            ) : items.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-art">✧</div>
+                <h3>第一张作品，等你来创作</h3>
+                <p>输入一段描述，开启你的灵感画廊。</p>
+                <button
+                  className="text-button"
+                  onClick={() => setTab("create")}
+                >
+                  去创作 ↗
+                </button>
+              </div>
+            ) : (
+              <div className="gallery">
+                {items.map((item) => (
+                  <article key={item.id} className="generation-card">
+                    {item.status === "succeeded" && item.imageUrl ? (
+                      <button
+                        className="artwork-button"
+                        onClick={() => setSelected(item)}
+                        aria-label={`预览：${item.prompt}`}
+                      >
+                        <img
+                          src={item.imageUrl}
+                          alt={item.prompt}
+                          loading="lazy"
+                        />
+                        <span className="expand-label">查看大图 ↗</span>
+                      </button>
+                    ) : (
+                      <div
+                        className={`artwork-placeholder ${item.status === "failed" ? "failed" : ""}`}
+                      >
+                        {item.status === "failed" ? (
+                          <span className="failed-mark">!</span>
+                        ) : (
+                          <span className="spinner" />
+                        )}
+                        <strong>{statusLabels[item.status]}</strong>
+                        <span>
+                          {item.error ||
+                            (item.status === "queued"
+                              ? "灵感已收到，请稍候"
+                              : "画面正在慢慢成形")}
+                        </span>
+                      </div>
+                    )}
+                    <div className="card-content">
+                      <div className="card-meta">
+                        <time dateTime={item.createdAt}>
+                          {new Date(item.createdAt).toLocaleString("zh-CN", {
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                        <span>
+                          {item.referenceKey ? "图文生图" : "文字生图"}
+                        </span>
+                      </div>
+                      <p className="card-prompt">{item.prompt}</p>
+                      <button
+                        className="text-button"
+                        onClick={() => reuse(item)}
+                      >
+                        {item.status === "failed" ? "重新创作" : "使用此描述"} ↗
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+            {cursor && (
+              <button
+                className="load-more"
+                disabled={loadingMore}
+                onClick={() => void loadMore()}
+              >
+                {loadingMore ? "加载中…" : "加载更多作品"}
+              </button>
+            )}
+          </section>
+        </div>
+      </main>
+      <footer className="studio-footer">
+        让每一个小小的想法，都拥有自己的画面。
+      </footer>
+      <dialog
+        ref={dialog}
+        className="preview-dialog"
+        onClose={() => setSelected(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setSelected(null);
+        }}
+      >
+        {selected && (
+          <div className="preview-content">
+            <div className="preview-toolbar">
+              <span>作品预览</span>
+              <button
+                className="remove-button"
+                onClick={() => setSelected(null)}
+                aria-label="关闭预览"
+              >
+                ×
+              </button>
+            </div>
+            <img src={selected.imageUrl || ""} alt={selected.prompt} />
+            <p>{selected.prompt}</p>
+            <div className="preview-actions">
+              <button className="text-button" onClick={() => reuse(selected)}>
+                使用此描述 ↗
+              </button>
+              <a
+                href={selected.imageUrl || ""}
+                target="_blank"
+                rel="noreferrer"
+              >
+                查看原图 ↗
+              </a>
+            </div>
+          </div>
         )}
-      </section>
-    </main>
+      </dialog>
+    </div>
   );
 }
-
 export default App;

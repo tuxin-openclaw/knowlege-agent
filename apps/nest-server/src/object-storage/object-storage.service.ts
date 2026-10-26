@@ -45,7 +45,21 @@ export class ObjectStorageService {
     };
   }
 
-  async createUpload(file: { name: string; size: number; contentType: string }) {
+  createPreviewUrl(key: string) {
+    return this.adapter.createPreviewUrl(key, 3600);
+  }
+  readImage(key: string) {
+    return this.adapter.readImage(key);
+  }
+  saveImage(key: string, bytes: Uint8Array, contentType: string) {
+    return this.adapter.saveImage(key, bytes, contentType);
+  }
+
+  async createUpload(file: {
+    name: string;
+    size: number;
+    contentType: string;
+  }) {
     const status = this.getStatus();
     if (!status.configured) {
       throw new ServiceUnavailableException(

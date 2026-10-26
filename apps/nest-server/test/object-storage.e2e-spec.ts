@@ -44,7 +44,11 @@ describe('upload endpoint', () => {
       .post('/api/uploads/presign')
       .send({ name: 'test.txt', size: 5, contentType: 'text/plain' })
       .expect(201);
-    expect(createUpload).toHaveBeenCalledWith({ name: 'test.txt', size: 5, contentType: 'text/plain' });
+    expect(createUpload).toHaveBeenCalledWith({
+      name: 'test.txt',
+      size: 5,
+      contentType: 'text/plain',
+    });
   });
 
   it('rejects invalid sizes before accessing storage', async () => {

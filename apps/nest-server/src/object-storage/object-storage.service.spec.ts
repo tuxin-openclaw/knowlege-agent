@@ -17,13 +17,18 @@ describe('ObjectStorageService', () => {
     OBJECT_STORAGE_REGION: 'ap-guangzhou',
   };
   const adapter: ObjectStorageAdapter = {
+    createPreviewUrl: vi.fn(),
+    readImage: vi.fn(),
+    saveImage: vi.fn(),
     createUploadUrl: vi.fn().mockResolvedValue('https://example.test/put'),
     createDownloadUrl: vi.fn().mockResolvedValue('https://example.test/signed'),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(adapter.createUploadUrl).mockResolvedValue('https://example.test/put');
+    vi.mocked(adapter.createUploadUrl).mockResolvedValue(
+      'https://example.test/put',
+    );
     vi.mocked(adapter.createDownloadUrl).mockResolvedValue(
       'https://example.test/signed',
     );
@@ -48,7 +53,9 @@ describe('ObjectStorageService', () => {
     );
     const result = await service.createUpload(file);
     expect(adapter.createUploadUrl).toHaveBeenCalledWith(
-      expect.stringMatching(/^upload-tests\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.txt$/),
+      expect.stringMatching(
+        /^upload-tests\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.txt$/,
+      ),
       'text/plain',
       300,
     );
@@ -62,8 +69,9 @@ describe('ObjectStorageService', () => {
       new ConfigService(configuration),
       adapter,
     );
-    await expect(service.createUpload({ ...file, size: 10 * 1024 * 1024 + 1 }))
-      .rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.createUpload({ ...file, size: 10 * 1024 * 1024 + 1 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(adapter.createUploadUrl).not.toHaveBeenCalled();
   });
 

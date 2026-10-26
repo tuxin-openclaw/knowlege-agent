@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ObjectStorageModule } from './object-storage/object-storage.module.js';
+import { ImagesModule } from './images/images.module.js';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ObjectStorageModule } from './object-storage/object-storage.module.js';
       envFilePath: fileURLToPath(new URL('../.env', import.meta.url)),
     }),
     ObjectStorageModule,
+    ImagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

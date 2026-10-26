@@ -53,6 +53,7 @@ export class S3CompatibleStorageAdapter implements ObjectStorageAdapter {
         .get<string>('OBJECT_STORAGE_SESSION_TOKEN')
         ?.trim();
       this.client = new S3Client({
+        requestChecksumCalculation: 'WHEN_REQUIRED',
         region: this.config.getOrThrow<string>('OBJECT_STORAGE_REGION').trim(),
         ...(endpoint ? { endpoint } : {}),
         forcePathStyle:
@@ -65,5 +66,48 @@ export class S3CompatibleStorageAdapter implements ObjectStorageAdapter {
       });
     }
     return this.client;
+  }
+
+  createPreviewUrl(key: string, expiresIn: number) {
+    return getSignedUrl(
+      this.getClient(),
+      new GetObjectCommand({
+        Bucket: this.config.getOrThrow<string>('OBJECT_STORAGE_BUCKET'),
+        Key: key,
+        ResponseContentDisposition: 'inline',
+      }),
+      { expiresIn },
+    );
+  }
+
+  async readImage(key: string) {
+    const result = await this.getClient().send(
+      new GetObjectCommand({
+        Bucket: this.config.getOrThrow<string>('OBJECT_STORAGE_BUCKET'),
+        Key: key,
+      }),
+    );
+    if (
+      !result.Body ||
+      !result.ContentLength ||
+      result.ContentLength > 10 * 1024 * 1024
+    ) {
+      throw new Error('参考图必须非空且不超过 10 MB');
+    }
+    return {
+      bytes: await result.Body.transformToByteArray(),
+      contentType: result.ContentType || '',
+    };
+  }
+
+  async saveImage(key: string, bytes: Uint8Array, contentType: string) {
+    await this.getClient().send(
+      new PutObjectCommand({
+        Bucket: this.config.getOrThrow<string>('OBJECT_STORAGE_BUCKET'),
+        Key: key,
+        Body: bytes,
+        ContentType: contentType,
+      }),
+    );
   }
 }
