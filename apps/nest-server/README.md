@@ -53,6 +53,21 @@ PostgreSQL 用户、密码和库名只在数据卷首次初始化时生效。
 $ pnpm install
 ```
 
+### COS 文件生命周期
+
+新上传的参考图先写入 `knowlege-agent/tmp/日期/`。提交生图任务时，后端校验图片并复制到 `knowlege-agent/references/`，数据库保存正式 key；前端同步使用返回的正式 key，以便后续复用。
+
+临时目录配置 1 天到期删除，由 COS 每日扫描并异步清理，不保证上传满 24 小时立即删除。正式参考图、`generated-images/` 中的生成结果和旧 `upload-tests/` 文件不适用这条规则，历史记录仍可正常读取。提交写库失败时，后端确认没有已提交记录后会尝试清理本次正式副本；若数据库持续不可用，则保留副本并记录错误，避免误删已经提交的文件。
+
+在 `apps/nest-server` 目录读取 `.env` 中的存储配置，查看或应用规则（需要桶生命周期读写权限）：
+
+```bash
+pnpm storage:lifecycle
+pnpm storage:lifecycle --apply
+```
+
+脚本保留桶内其他规则，只新增或更新 `knowlege-agent-expire-temporary-uploads`；不会在服务启动时自动修改桶配置。
+
 ## Compile and run the project
 
 ```bash

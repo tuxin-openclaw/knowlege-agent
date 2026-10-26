@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -107,6 +108,15 @@ export class S3CompatibleStorageAdapter implements ObjectStorageAdapter {
         Key: key,
         Body: bytes,
         ContentType: contentType,
+      }),
+    );
+  }
+
+  async deleteImage(key: string) {
+    await this.getClient().send(
+      new DeleteObjectCommand({
+        Bucket: this.config.getOrThrow<string>('OBJECT_STORAGE_BUCKET'),
+        Key: key,
       }),
     );
   }

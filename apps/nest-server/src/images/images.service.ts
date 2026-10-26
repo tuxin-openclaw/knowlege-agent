@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  BadGatewayException,
   HttpException,
   Injectable,
   Logger,
@@ -9,7 +10,11 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../database/database.service.js';
-import { ObjectStorageService } from '../object-storage/object-storage.service.js';
+import {
+  ObjectStorageService,
+  REFERENCE_PREFIX,
+  TEMP_UPLOAD_PREFIX,
+} from '../object-storage/object-storage.service.js';
 import { ImageApiService, imageFormat } from './image-api.service.js';
 
 interface GenerationRow {
@@ -27,7 +32,7 @@ interface GenerationRow {
 export const UUID =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const REFERENCE_KEY =
-  /^upload-tests\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]{36}(\.[a-zA-Z0-9.]{1,16})?$/;
+  /^(?:(?:upload-tests|knowlege-agent\/tmp)\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]{36}(\.[a-zA-Z0-9.]{1,16})?|knowlege-agent\/references\/[a-f0-9-]{36}\.(?:png|jpg|webp))$/;
 
 @Injectable()
 export class ImagesService implements OnModuleInit, OnModuleDestroy {
@@ -37,12 +42,20 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
   private closing = false;
   private active?: Promise<void>;
 
+  /**
+   * 保存生图流程依赖的服务。
+   * 数据库管理任务状态，对象存储管理图片，图像服务负责调用上游模型。
+   */
   constructor(
     private readonly db: DatabaseService,
     private readonly storage: ObjectStorageService,
     private readonly api: ImageApiService,
   ) {}
 
+  /**
+   * 启动后台队列轮询。
+   * 定期检查任务，但同一进程里只处理一个生图任务。
+   */
   onModuleInit() {
     this.timer = setInterval(() => {
       if (!this.running && !this.closing) this.active = this.processNext();
@@ -50,12 +63,20 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
     this.timer.unref();
   }
 
+  /**
+   * 停止接收新任务并等待当前任务结束。
+   * 避免关闭服务时中断图片保存或任务状态更新。
+   */
   async onModuleDestroy() {
     this.closing = true;
     clearInterval(this.timer);
     await this.active;
   }
 
+  /**
+   * 校验生图请求并将任务写入队列。
+   * 临时参考图会先复制到正式目录，再把正式 key 保存到任务记录。
+   */
   async create(input: unknown) {
     if (!input || typeof input !== 'object')
       throw new BadRequestException('请填写图片描述');
@@ -87,24 +108,65 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
       throw new ServiceUnavailableException(
         '历史记录服务暂不可用，请检查 Postgres',
       );
-    if (referenceKey) {
+    const id = randomUUID();
+    let storedReferenceKey = (referenceKey as string | undefined) || null;
+    let promotedKey: string | undefined;
+    if (storedReferenceKey) {
+      let reference: { bytes: Uint8Array; contentType: string };
+      let format: ReturnType<typeof imageFormat>;
       try {
-        imageFormat(
-          (await this.storage.readImage(referenceKey as string)).bytes,
-        );
+        reference = await this.storage.readImage(storedReferenceKey);
+        format = imageFormat(reference.bytes);
       } catch {
         throw new BadRequestException(
           '无法读取参考图，请上传不超过 10 MB 的 PNG、JPEG 或 WebP 图片',
         );
       }
+      if (storedReferenceKey.startsWith(TEMP_UPLOAD_PREFIX)) {
+        // 每个任务使用独立的正式 key，后续复用不依赖临时文件的保留时间。
+        promotedKey = `${REFERENCE_PREFIX}${id}.${format.extension}`;
+        try {
+          await this.storage.saveImage(
+            promotedKey,
+            reference.bytes,
+            format.type,
+          );
+        } catch {
+          throw new BadGatewayException('参考图保存失败，请稍后重试');
+        }
+        // 正式记录只引用正式目录，临时原件交给 COS 生命周期清理。
+        storedReferenceKey = promotedKey;
+      }
     }
-    const result = await this.db.query<GenerationRow>(
-      `INSERT INTO image_generations (id, prompt, reference_key, model_name) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [randomUUID(), prompt.trim(), referenceKey || null, model.model],
-    );
-    return this.serialize(result.rows[0]);
+    let row: GenerationRow;
+    try {
+      const result = await this.db.query<GenerationRow>(
+        `INSERT INTO image_generations (id, prompt, reference_key, model_name) VALUES ($1, $2, $3, $4) RETURNING *`,
+        [id, prompt.trim(), storedReferenceKey, model.model],
+      );
+      row = result.rows[0];
+    } catch (error) {
+      if (promotedKey) {
+        try {
+          // 写库响应丢失时先确认记录不存在，避免删掉已提交任务的参考图。
+          const saved = await this.db.query(
+            'SELECT id FROM image_generations WHERE id = $1',
+            [id],
+          );
+          if (!saved.rows.length) await this.storage.deleteImage(promotedKey);
+        } catch {
+          this.logger.error('参考图保存状态无法确认，请检查数据库和对象存储');
+        }
+      }
+      throw error;
+    }
+    return this.serialize(row);
   }
 
+  /**
+   * 按创建时间倒序读取作品，并支持用上一页游标继续加载。
+   * 返回数据中的图片 key 会转换成短期预览地址。
+   */
   async list(before?: string) {
     if (before && !UUID.test(before))
       throw new BadRequestException('分页参数无效');
@@ -114,6 +176,7 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
        ORDER BY created_at DESC, id DESC LIMIT 13`,
       [before || null],
     );
+    // 多查一条只为判断是否还有下一页，单页最多返回 12 条。
     const rows = result.rows.slice(0, 12);
     return {
       items: await Promise.all(rows.map((row) => this.serialize(row))),
@@ -121,16 +184,21 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  /**
+   * 领取并处理一条待生成任务。
+   * 成功时保存结果并更新 key，失败时将任务标为失败并记录原因。
+   */
   async processNext() {
     if (this.running || this.closing || !this.api.getConfiguration().configured)
       return;
     this.running = true;
     let job: GenerationRow | undefined;
     try {
-      // Do not silently reissue a paid generation after an interrupted server process.
+      // 进程中断的付费任务标记为失败，避免服务重启后自动重复扣费。
       await this.db
         .query(`UPDATE image_generations SET status = 'failed', error_message = '任务中断，请重新生成', completed_at = now()
         WHERE status = 'generating' AND started_at < now() - interval '10 minutes'`);
+      // 原子领取一条任务，并跳过其他实例已经锁定的任务行。
       const claim = await this.db.query<GenerationRow>(`WITH candidate AS (
         SELECT id FROM image_generations WHERE status = 'queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1
       ) UPDATE image_generations SET status = 'generating', started_at = now()
@@ -169,10 +237,15 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn('暂时无法读取生图队列，请检查 Postgres');
       }
     } finally {
+      // 让下一轮轮询可以继续领取任务。
       this.running = false;
     }
   }
 
+  /**
+   * 将数据库行整理成前端作品格式。
+   * 数据库只保存对象 key，预览地址在读取时重新签发。
+   */
   private async serialize(row: GenerationRow) {
     return {
       id: row.id,

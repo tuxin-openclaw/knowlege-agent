@@ -130,6 +130,13 @@ function App() {
       }
       const job = await imageApi.create(prompt.trim(), key);
       if (!job) return;
+      if (job.referenceKey && job.referenceUrl) {
+        setReference((previous) => ({
+          key: job.referenceKey!,
+          url: job.referenceUrl!,
+          name: previous?.name || "参考图",
+        }));
+      }
       setItems((previous) => [
         job,
         ...previous.filter((item) => item.id !== job.id),

@@ -16,6 +16,8 @@ import {
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const UPLOAD_URL_EXPIRES_SECONDS = 300;
+export const TEMP_UPLOAD_PREFIX = 'knowlege-agent/tmp/';
+export const REFERENCE_PREFIX = 'knowlege-agent/references/';
 const DOWNLOAD_EXPIRES_SECONDS = 300;
 const REQUIRED_KEYS = [
   'OBJECT_STORAGE_ACCESS_KEY_ID',
@@ -54,6 +56,9 @@ export class ObjectStorageService {
   saveImage(key: string, bytes: Uint8Array, contentType: string) {
     return this.adapter.saveImage(key, bytes, contentType);
   }
+  deleteImage(key: string) {
+    return this.adapter.deleteImage(key);
+  }
 
   async createUpload(file: {
     name: string;
@@ -73,7 +78,7 @@ export class ObjectStorageService {
     const extension = extname(file.name)
       .replace(/[^a-zA-Z0-9.]/g, '')
       .slice(0, 16);
-    const key = `upload-tests/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${extension}`;
+    const key = `${TEMP_UPLOAD_PREFIX}${new Date().toISOString().slice(0, 10)}/${randomUUID()}${extension}`;
     try {
       const contentType = file.contentType || 'application/octet-stream';
       const uploadUrl = await this.adapter.createUploadUrl(

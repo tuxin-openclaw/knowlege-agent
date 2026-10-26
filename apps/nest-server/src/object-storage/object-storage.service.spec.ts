@@ -20,6 +20,7 @@ describe('ObjectStorageService', () => {
     createPreviewUrl: vi.fn(),
     readImage: vi.fn(),
     saveImage: vi.fn(),
+    deleteImage: vi.fn(),
     createUploadUrl: vi.fn().mockResolvedValue('https://example.test/put'),
     createDownloadUrl: vi.fn().mockResolvedValue('https://example.test/signed'),
   };
@@ -54,7 +55,7 @@ describe('ObjectStorageService', () => {
     const result = await service.createUpload(file);
     expect(adapter.createUploadUrl).toHaveBeenCalledWith(
       expect.stringMatching(
-        /^upload-tests\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.txt$/,
+        /^knowlege-agent\/tmp\/\d{4}-\d{2}-\d{2}\/[a-f0-9-]+\.txt$/,
       ),
       'text/plain',
       300,
