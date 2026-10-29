@@ -5,6 +5,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ObjectStorageModule } from './object-storage/object-storage.module.js';
 import { ImagesModule } from './images/images.module.js';
+import { ModelComparisonModule } from './model-comparison/model-comparison.module.js';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ImagesModule } from './images/images.module.js';
     }),
     ObjectStorageModule,
     ImagesModule,
+    ModelComparisonModule,
   ],
   controllers: [AppController],
   providers: [AppService],

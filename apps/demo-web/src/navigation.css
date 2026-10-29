@@ -1,0 +1,49 @@
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding: 0 max(24px, calc((100vw - 1280px) / 2));
+  min-height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #e4e8de;
+  position: relative;
+  z-index: 2;
+}
+.app-nav-brand {
+  font-weight: 750;
+  white-space: nowrap;
+  color: #304b33;
+}
+.app-nav-links {
+  display: flex;
+  align-self: stretch;
+  gap: 28px;
+}
+.app-nav-links a {
+  display: flex;
+  align-items: center;
+  color: #7a847a;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.app-nav-links a.active {
+  color: #294d35;
+  border-color: #739365;
+}
+@media (max-width: 560px) {
+  .app-nav {
+    gap: 20px;
+    padding: 0 16px;
+  }
+  .app-nav-links {
+    gap: 16px;
+  }
+  .app-nav-brand {
+    font-size: 14px;
+  }
+  .app-nav-links a {
+    font-size: 13px;
+  }
+}

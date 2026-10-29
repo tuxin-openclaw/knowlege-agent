@@ -149,3 +149,7 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## 模型参数对比
+
+在本目录 `.env` 配置 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL_NAME`，使用支持 Chat Completions 流式调用的 OpenAI 兼容服务。启动服务后，`/api/model-comparison/run` 接收 AG-UI 运行请求并以 SSE 返回 AG-UI 事件；密钥仅用于服务端请求，不会返回浏览器。该接口供本地演示使用，公开部署前需自行配置访问控制。
