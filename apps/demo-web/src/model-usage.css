@@ -1,0 +1,191 @@
+.usage-page {
+  max-width: 1400px;
+  margin: auto;
+  padding: 30px 24px 90px;
+  color: #26382d;
+}
+/* 页面标题与说明已移除，这里只剩右上角的操作按钮/链接。 */
+.usage-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+.usage-note {
+  font-size: 13px;
+  color: #829084;
+  line-height: 1.7;
+  margin: 0;
+}
+.usage-toolbar a,
+.back-link {
+  color: #3d6648;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.usage-toolbar button,
+.usage-pagination button,
+.usage-table button {
+  background: #fff;
+  border: 1px solid #d9e4d6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #3d6648;
+}
+.usage-filters,
+.usage-table {
+  background: #fff;
+  border: 1px solid #e3e9df;
+  border-radius: 16px;
+  padding: 22px;
+}
+.usage-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+.usage-filters label {
+  font-size: 12px;
+  color: #627568;
+  font-weight: 650;
+}
+.usage-filters input,
+.usage-filters select {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid #dfe8dc;
+  border-radius: 8px;
+  background: #fafcf9;
+  color: #26382d;
+  font: inherit;
+  font-size: 13px;
+}
+.usage-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.usage-cards > div {
+  background: #fff;
+  border: 1px solid #e3e9df;
+  border-radius: 14px;
+  padding: 20px;
+  min-width: 0;
+}
+.usage-cards span,
+.usage-cards small {
+  display: block;
+  color: #8d9b8e;
+  font-size: 12px;
+}
+.usage-cards strong {
+  display: block;
+  font-size: 24px;
+  margin: 13px 0;
+  color: #345b3e;
+  overflow-wrap: anywhere;
+}
+.usage-note {
+  margin: 15px 0;
+}
+.usage-error {
+  margin: 15px 0;
+  padding: 12px;
+  background: #fff1ef;
+  color: #a3433e;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.usage-success {
+  color: #478350;
+  font-size: 13px;
+}
+.usage-table {
+  margin-top: 22px;
+}
+.usage-table h2 {
+  font-size: 17px;
+  margin: 0 0 20px;
+}
+.usage-table h2 span {
+  font-size: 12px;
+  color: #8a9d89;
+}
+.table-scroll {
+  overflow: auto;
+}
+/* 只作用于还没迁移到组件库的表格（用量监控页）；模型配置页用的是 @knowledge/ui 的 Table。 */
+.usage-table table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+.usage-table th {
+  color: #90a091;
+  font-weight: 600;
+  background: #f8faf7;
+}
+.usage-table td,
+.usage-table th {
+  padding: 13px 10px;
+  border-bottom: 1px solid #edf1eb;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.usage-table td small {
+  color: #95a095;
+}
+.usage-table .provider-cell {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.usage-empty {
+  text-align: center;
+  color: #a5afa5;
+  padding: 30px;
+  font-size: 13px;
+}
+.usage-pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+  margin-top: 18px;
+  color: #899789;
+  font-size: 12px;
+}
+.usage-pagination button:disabled {
+  opacity: 0.4;
+}
+.save-price {
+  background: #385d42;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+}
+.back-link {
+  align-self: center;
+}
+@media (max-width: 600px) {
+  .usage-page {
+    padding: 32px 16px 60px;
+  }
+  .usage-toolbar {
+    flex-wrap: wrap;
+  }
+  .usage-filters,
+  .usage-table {
+    padding: 16px;
+  }
+}

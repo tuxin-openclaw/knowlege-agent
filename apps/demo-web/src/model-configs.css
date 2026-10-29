@@ -1,0 +1,89 @@
+/*
+ * 模型配置页只保留布局样式；
+ * 按钮、输入框、下拉、复选框、表格、对话框、徽标都由 @knowledge/ui 组件自带样式。
+ */
+.config-card {
+  margin-top: 22px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e3e9df;
+  border-radius: 16px;
+}
+.config-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.config-table-heading h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.config-table-heading h2 span {
+  font-size: 12px;
+  color: #8a9d89;
+}
+.config-form {
+  display: grid;
+  gap: 16px;
+}
+.model-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.config-field {
+  display: grid;
+  gap: 8px;
+}
+.config-field label {
+  font-size: 12px;
+  color: #627568;
+  font-weight: 650;
+}
+.price-section {
+  display: grid;
+  gap: 10px;
+}
+.price-section-title {
+  font-size: 12px;
+  color: #627568;
+  font-weight: 650;
+}
+.model-config-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 13px;
+  color: #56685a;
+}
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+}
+.config-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.config-form .usage-note {
+  margin: 0;
+}
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+.price-cell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: #56685a;
+}
+@media (max-width: 600px) {
+  .model-config-switches {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

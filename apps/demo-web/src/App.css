@@ -3,6 +3,10 @@
   margin: auto;
   padding: 0 24px;
 }
+/* 页面标题已移除，main 自己留出顶部间距。 */
+.studio main {
+  padding-top: 28px;
+}
 .studio-header {
   min-height: 84px;
   display: flex;
@@ -29,27 +33,11 @@
   font-size: 10px;
   letter-spacing: 0.16em;
 }
-.intro {
-  padding: 48px 0 34px;
-}
 .eyebrow {
   font-size: 11px;
   font-weight: 650;
   color: #647760;
   letter-spacing: 0.14em;
-}
-h1 {
-  font-size: clamp(32px, 6vw, 46px);
-  font-weight: 650;
-  line-height: 1.25;
-  letter-spacing: -0.055em;
-  margin: 14px 0;
-}
-.intro p {
-  font-size: 14px;
-  line-height: 1.8;
-  color: #7b7f77;
-  margin: 0;
 }
 h2 {
   font-size: 17px;
@@ -129,6 +117,36 @@ textarea::placeholder {
   padding: 8px 10px;
   background: white;
   min-height: 36px;
+}
+.model-select-block {
+  margin: 0 0 26px;
+}
+.model-select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #e3e7db;
+  border-radius: 12px;
+  background: #f8f9f5;
+  color: #29322a;
+  font: inherit;
+  font-size: 13px;
+}
+.model-select:disabled {
+  color: #91968a;
+}
+.model-hint {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed #ddd8c4;
+  border-radius: 12px;
+  background: #fdfbf1;
+  color: #8a7c4f;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.model-hint a {
+  color: #6f6026;
+  font-weight: 700;
 }
 .reference-heading {
   display: flex;
@@ -509,21 +527,6 @@ textarea::placeholder {
   .header-tag {
     font-size: 8px;
     letter-spacing: 0.1em;
-  }
-  .intro {
-    padding: 14px 0 12px;
-  }
-  .intro .eyebrow,
-  .intro p {
-    display: none;
-  }
-  .intro h1 {
-    font-size: 20px;
-    line-height: 1.35;
-    margin: 0;
-  }
-  .intro h1 br {
-    display: none;
   }
   .tabs {
     display: flex;

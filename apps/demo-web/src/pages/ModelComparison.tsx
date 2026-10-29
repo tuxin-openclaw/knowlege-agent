@@ -2,11 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { HttpAgent } from "@ag-ui/client";
 import type { AssistantMessage } from "@ag-ui/core";
 import { CopilotChatAssistantMessage } from "@copilotkit/react-core/v2";
+import { Link } from "react-router-dom";
+import { modelConfigs } from "@/api/model-configs";
+import type { ModelConfig } from "@/api/model-configs";
 import "@copilotkit/react-core/v2/styles.css";
 import "@/model-comparison.css";
 
 type Panel = {
   id: string;
+  /** 任务使用的文本模型配置；来自页面“模型配置”。 */
+  modelId: string;
   temperature: number;
   topP: number;
   thinking: boolean;
@@ -15,8 +20,9 @@ type Panel = {
   error: string;
   completed: boolean;
 };
-const makePanel = (): Panel => ({
+const makePanel = (modelId = ""): Panel => ({
   id: crypto.randomUUID(),
+  modelId,
   temperature: 1,
   topP: 1,
   thinking: false,
@@ -29,7 +35,38 @@ const makePanel = (): Panel => ({
 export default function ModelComparison() {
   const [prompt, setPrompt] = useState("");
   const [panels, setPanels] = useState<Panel[]>(() => [makePanel()]);
+  const [models, setModels] = useState<ModelConfig[]>([]);
+  const [modelError, setModelError] = useState("");
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const agents = useRef(new Map<string, HttpAgent>());
+  const defaultModelId =
+    models.find((config) => config.isDefault)?.id ?? models[0]?.id ?? "";
+  useEffect(() => {
+    void (async () => {
+      try {
+        const list = (await modelConfigs.list()).filter(
+          (config) => config.kind === "text",
+        );
+        setModels(list);
+        // 补齐没有选择的任务，并把已被删除的模型换回默认模型。
+        const fallback =
+          (list.find((config) => config.isDefault) ?? list[0])?.id ?? "";
+        setPanels((previous) =>
+          previous.map((panel) =>
+            list.some((config) => config.id === panel.modelId)
+              ? panel
+              : { ...panel, modelId: fallback },
+          ),
+        );
+      } catch (error) {
+        setModelError(
+          error instanceof Error ? error.message : "加载模型配置失败",
+        );
+      } finally {
+        setModelsLoaded(true);
+      }
+    })();
+  }, []);
   useEffect(
     () => () => {
       for (const agent of agents.current.values()) agent.abortRun();
@@ -50,7 +87,7 @@ export default function ModelComparison() {
     setPanels((previous) => previous.filter((panel) => panel.id !== id));
   }
   async function run(panel: Panel, text: string) {
-    if (!text.trim() || agents.current.has(panel.id)) return;
+    if (!text.trim() || !panel.modelId || agents.current.has(panel.id)) return;
     const agent = new HttpAgent({
       url: "/api/model-comparison/run",
       fetch: async (url, init) => {
@@ -68,6 +105,7 @@ export default function ModelComparison() {
     });
     agents.current.set(panel.id, agent);
     agent.setState({
+      modelId: panel.modelId,
       temperature: panel.temperature,
       top_p: panel.topP,
       thinking: panel.thinking,
@@ -113,14 +151,6 @@ export default function ModelComparison() {
   }
   return (
     <div className="comparison-page">
-      <header className="comparison-heading">
-        <div>
-          <div className="comparison-eyebrow">MODEL PLAYGROUND</div>
-          <h1>模型参数对比</h1>
-          <p>使用同一个提示词，观察不同采样参数下的回答。</p>
-        </div>
-        <span className="comparison-badge">AG-UI · STREAMING</span>
-      </header>
       <section className="prompt-card">
         <div className="section-label">
           <div>
@@ -142,6 +172,7 @@ export default function ModelComparison() {
             className="primary-button"
             disabled={
               !prompt.trim() ||
+              !models.length ||
               panels.length === 0 ||
               panels.every((panel) => panel.running)
             }
@@ -155,16 +186,32 @@ export default function ModelComparison() {
           </button>
         </div>
       </section>
+      {(modelError || (modelsLoaded && !models.length)) && (
+        <div className="model-warning" role="alert">
+          <span>
+            {modelError ? (
+              modelError
+            ) : (
+              <>
+                还没有可用的文本模型，请先到{" "}
+                <Link to="/model-configs">模型配置</Link> 添加一个文本模型。
+              </>
+            )}
+          </span>
+        </div>
+      )}
       <div className="panels-heading">
         <div>
           <h2>
             对比任务 <span>{panels.length}</span>
           </h2>
-          <p>为每个任务设置不同参数，然后单独或一起生成。</p>
+          <p>为每个任务选择模型和参数，然后单独或一起生成。</p>
         </div>
         <button
           className="add-button"
-          onClick={() => setPanels((previous) => [...previous, makePanel()])}
+          onClick={() =>
+            setPanels((previous) => [...previous, makePanel(defaultModelId)])
+          }
         >
           ＋ 新增任务
         </button>
@@ -191,6 +238,24 @@ export default function ModelComparison() {
                 >
                   ×
                 </button>
+              </div>
+              <div className="model-picker">
+                <label htmlFor={`model-${panel.id}`}>模型</label>
+                <select
+                  id={`model-${panel.id}`}
+                  value={panel.modelId}
+                  disabled={panel.running || !models.length}
+                  onChange={(event) =>
+                    update(panel.id, { modelId: event.target.value })
+                  }
+                >
+                  {!models.length && <option value="">尚未配置文本模型</option>}
+                  {models.map((config) => (
+                    <option key={config.id} value={config.id}>
+                      {config.name} · {config.model}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="thinking-control">
                 <div>
@@ -296,7 +361,7 @@ export default function ModelComparison() {
               </div>
               <button
                 className="run-button"
-                disabled={!prompt.trim() || panel.running}
+                disabled={!prompt.trim() || !panel.modelId || panel.running}
                 onClick={() => void run(panel, prompt)}
               >
                 {panel.running ? "生成中…" : "生成回答 ↗"}

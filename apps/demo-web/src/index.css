@@ -1,3 +1,7 @@
+@import "@knowledge/ui/globals.css";
+/* 相对本文件；组件库自己的 globals.css 里已有一层 @source，这里再补一条以防打包路径变化。 */
+@source "../../../packages/ui/src";
+
 :root {
   font-family:
     Inter,
@@ -7,24 +11,32 @@
     "PingFang SC",
     "Microsoft YaHei",
     sans-serif;
-  color: #29322a;
-  background: #f7f8f2;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
-* {
-  box-sizing: border-box;
-}
+
 body {
   margin: 0;
   min-width: 320px;
+  /* 页面底色沿用原有的浅绿；组件库的 --background 是纯白，所以这里单独设置。 */
+  background: #f7f8f2;
+  color: #29322a;
 }
-button,
-input,
-textarea {
-  font: inherit;
+
+/*
+ * Tailwind preflight 默认给 html 设了 line-height: 1.5，
+ * 会让还没迁移到组件库的页面行距整体变松；这里恢复原来的 normal。
+ * 组件库内部的字号类自带 line-height，不受影响。
+ */
+html {
+  line-height: normal;
 }
+
+/*
+ * Tailwind 的 preflight 会清掉默认的按钮手型和焦点样式，
+ * 这里补回来：还没迁移到组件库的页面仍然使用原生 button / input。
+ */
 button {
   cursor: pointer;
   color: inherit;

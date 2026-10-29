@@ -1,9 +1,6 @@
-import {
-  BadGatewayException,
-  Injectable,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadGatewayException, Injectable } from '@nestjs/common';
+import { ModelUsageService } from '../model-usage/model-usage.service.js';
+import { ModelConfigService } from '../model-config/model-config.service.js';
 
 export const MAX_RESULT_BYTES = 30 * 1024 * 1024;
 
@@ -22,35 +19,40 @@ export function imageFormat(bytes: Uint8Array) {
 
 @Injectable()
 export class ImageApiService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly configs: ModelConfigService,
+    private readonly usage: ModelUsageService,
+  ) {}
 
-  getConfiguration() {
-    const keys = [
-      'IMAGE_API_KEY',
-      'IMAGE_BASE_URL',
-      'IMAGE_MODEL_NAME',
-    ] as const;
-    const missing = keys.filter((key) => !this.config.get<string>(key)?.trim());
+  /**
+   * 读取当前可用的生图模型（不解密密钥）。
+   * 指定 id 已被删除时回退到默认生图模型，便于页面持有旧 id 时继续提交任务。
+   */
+  async getConfiguration(modelId?: string) {
+    const model = await this.configs.summary('image', modelId);
     return {
-      configured: missing.length === 0,
-      missing,
-      model: this.config.get<string>('IMAGE_MODEL_NAME')?.trim() || null,
+      configured: model.configured,
+      modelId: model.id,
+      name: model.name,
+      model: model.model,
     };
   }
 
+  /**
+   * 调用上游生图接口并返回图片字节。
+   * 配置、密钥或监控记录任一不可用时都不会发起上游请求，避免产生无记录的付费调用。
+   * @param modelConfigId 页面指定的生图模型；不传或已失效时使用默认模型。
+   */
   async generate(
     prompt: string,
-    model: string,
+    modelConfigId?: string | null,
     reference?: { bytes: Uint8Array; contentType: string },
   ) {
-    if (!this.getConfiguration().configured)
-      throw new ServiceUnavailableException('请先配置生图模型环境变量');
-    const base = this.config
-      .getOrThrow<string>('IMAGE_BASE_URL')
-      .trim()
-      .replace(/\/+$/, '');
+    const config = await this.configs.resolve('image', modelConfigId);
+    const model = config.model;
+    const base = config.baseUrl.trim().replace(/\/+$/, '');
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.config.getOrThrow<string>('IMAGE_API_KEY').trim()}`,
+      Authorization: `Bearer ${config.apiKey.trim()}`,
     };
     let body: string | FormData;
     let path: string;
@@ -90,6 +92,7 @@ export class ImageApiService {
       path = '/images/generations';
     }
     // Some providers return temporary URLs, others return b64_json. Both are persisted to COS.
+    const callId = await this.usage.begin('image', base, model);
     let response: Response;
     try {
       response = await fetch(`${base}${path}`, {
@@ -99,15 +102,20 @@ export class ImageApiService {
         signal: AbortSignal.timeout(180000),
       });
     } catch {
+      await this.usage.finish(callId, 'unknown');
       throw new BadGatewayException('生图服务连接失败或超时，请稍后重试');
     }
     if (!response.ok) {
+      await this.usage.finish(
+        callId,
+        response.status >= 400 && response.status < 500 ? 'failed' : 'unknown',
+      );
       const failure = (await response.json().catch(() => null)) as {
         error?: { code?: string };
       } | null;
       if (failure?.error?.code === 'InvalidEndpointOrModel.NotFound') {
         throw new BadGatewayException(
-          `生图模型 ${model} 不存在或当前 API Key 无权访问，请检查 IMAGE_MODEL_NAME 和方舟模型权限`,
+          `生图模型 ${model} 不存在或当前 API Key 无权访问，请检查“模型配置”中的模型名称和方舟模型权限`,
         );
       }
       if (failure?.error?.code === 'ModelNotOpen') {
@@ -115,15 +123,31 @@ export class ImageApiService {
       }
       const message =
         response.status === 401 || response.status === 403
-          ? '生图服务鉴权失败，请检查 IMAGE_API_KEY'
+          ? '生图服务鉴权失败，请检查“模型配置”中的 API Key'
           : response.status === 429
             ? '生图服务限流或额度不足，请稍后重试'
             : `生图服务返回错误（${response.status}），请检查模型和接口配置`;
       throw new BadGatewayException(message);
     }
-    const payload = (await response.json()) as {
-      data?: { b64_json?: string; url?: string }[];
-    };
+    let payload: { data?: { b64_json?: string; url?: string }[] };
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      await this.usage.finish(callId, 'unknown');
+      throw new BadGatewayException('生图服务返回了无法识别的数据');
+    }
+    // 只统计上游明确返回的图片数量，后续下载或存储失败不改变模型调用结果。
+    await this.usage.finish(callId, 'succeeded', {
+      images:
+        Array.isArray(payload.data) &&
+        payload.data.every(
+          (item) =>
+            item &&
+            (typeof item.b64_json === 'string' || typeof item.url === 'string'),
+        )
+          ? payload.data.length
+          : null,
+    });
     const image = payload.data?.[0];
     let bytes: Uint8Array;
     if (image?.b64_json) {

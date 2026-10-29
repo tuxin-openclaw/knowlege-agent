@@ -13,6 +13,7 @@ const permanent =
   'knowlege-agent/references/12345678-1234-1234-1234-123456789012.png';
 const legacy =
   'upload-tests/2026-10-26/12345678-1234-1234-1234-123456789012.png';
+const MODEL_ID = '00000001-1111-4111-8111-111111111111';
 
 function setup() {
   const db = {
@@ -26,6 +27,7 @@ function setup() {
             prompt: params[1],
             reference_key: params[2],
             model_name: params[3],
+            model_config_id: params[4],
             result_key: null,
             status: 'queued',
             error_message: null,
@@ -46,14 +48,20 @@ function setup() {
       .mockImplementation(async (key: string) => `https://images.test/${key}`),
   };
   const api = {
-    getConfiguration: () => ({ configured: true, model: 'test-model' }),
+    getConfiguration: vi.fn().mockResolvedValue({
+      configured: true,
+      modelId: MODEL_ID,
+      name: '生图模型',
+      model: 'test-model',
+    }),
+    generate: vi.fn(),
   };
   const service = new ImagesService(
     db as unknown as DatabaseService,
     storage as unknown as ObjectStorageService,
     api as unknown as ImageApiService,
   );
-  return { service, db, storage };
+  return { service, db, storage, api };
 }
 
 describe('reference image lifecycle', () => {
@@ -73,6 +81,44 @@ describe('reference image lifecycle', () => {
     );
     expect(db.query.mock.calls[0][1][2]).toBe(result.referenceKey);
     expect(storage.deleteImage).not.toHaveBeenCalled();
+  });
+
+  it('records the selected image model with the queued task', async () => {
+    const { service, db, api } = setup();
+    const result = await service.create({
+      prompt: '公园',
+      modelId: MODEL_ID,
+    });
+    expect(api.getConfiguration).toHaveBeenCalledWith(MODEL_ID);
+    expect(db.query.mock.calls[0][1]).toEqual([
+      result.id,
+      '公园',
+      null,
+      'test-model',
+      MODEL_ID,
+    ]);
+    expect(result).toMatchObject({ model: 'test-model', modelId: MODEL_ID });
+  });
+
+  it('refuses to queue when no image model is configured', async () => {
+    const { service, db, api } = setup();
+    api.getConfiguration.mockResolvedValueOnce({
+      configured: false,
+      modelId: null,
+      name: null,
+      model: null,
+    });
+    await expect(service.create({ prompt: '公园' })).rejects.toThrow(
+      '尚未配置生图模型，请先在“模型配置”页面添加',
+    );
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-string model selection', async () => {
+    const { service } = setup();
+    await expect(
+      service.create({ prompt: '公园', modelId: 42 }),
+    ).rejects.toThrow('生图模型选择无效');
   });
 
   it.each([permanent, legacy])(

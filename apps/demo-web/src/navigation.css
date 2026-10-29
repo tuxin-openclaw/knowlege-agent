@@ -39,11 +39,14 @@
   }
   .app-nav-links {
     gap: 16px;
+    overflow-x: auto;
+    min-width: 0;
   }
   .app-nav-brand {
     font-size: 14px;
   }
   .app-nav-links a {
     font-size: 13px;
+    white-space: nowrap;
   }
 }

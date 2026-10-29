@@ -23,6 +23,46 @@ CREATE TABLE IF NOT EXISTS image_generations (
 );
 CREATE INDEX IF NOT EXISTS image_generations_history_idx ON image_generations (created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS image_generations_queue_idx ON image_generations (created_at) WHERE status = 'queued';
+
+-- 模型配置由页面维护；API Key 以 AES-256-GCM 密文保存，密钥来自 MODEL_CONFIG_SECRET。
+CREATE TABLE IF NOT EXISTS model_configs (
+  id uuid PRIMARY KEY,
+  kind text NOT NULL CHECK (kind IN ('text', 'image')),
+  name text NOT NULL,
+  base_url text NOT NULL,
+  model text NOT NULL,
+  api_key_cipher text NOT NULL,
+  api_key_hint text NOT NULL,
+  stream_include_usage boolean NOT NULL DEFAULT true,
+  is_default boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (kind, name)
+);
+CREATE INDEX IF NOT EXISTS model_configs_kind_idx ON model_configs (kind, is_default DESC, created_at);
+-- 生图任务记录使用的模型配置；配置删除后任务回退到当前默认模型。
+ALTER TABLE image_generations ADD COLUMN IF NOT EXISTS model_config_id uuid;
+
+CREATE TABLE IF NOT EXISTS model_prices (
+  kind text NOT NULL CHECK (kind IN ('text', 'image')),
+  provider text NOT NULL,
+  model text NOT NULL,
+  input_price numeric(24, 8), cached_input_price numeric(24, 8), output_price numeric(24, 8), image_price numeric(24, 8),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (kind, provider, model)
+);
+CREATE TABLE IF NOT EXISTS model_calls (
+  id uuid PRIMARY KEY, kind text NOT NULL CHECK (kind IN ('text', 'image')),
+  provider text NOT NULL, model text NOT NULL,
+  started_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'succeeded', 'failed', 'unknown')),
+  input_tokens bigint, output_tokens bigint, total_tokens bigint, cached_tokens bigint, reasoning_tokens bigint, image_count bigint,
+  input_price numeric(24, 8), cached_input_price numeric(24, 8), output_price numeric(24, 8), image_price numeric(24, 8),
+  duration_ms bigint,
+  estimated_cost numeric(32, 12)
+);
+CREATE INDEX IF NOT EXISTS model_calls_started_idx ON model_calls (started_at DESC, id DESC);
+
 `;
 
 @Injectable()
@@ -48,7 +88,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       return await this.pool!.query<T>(sql, params);
     } catch {
       throw new ServiceUnavailableException(
-        '历史记录数据库暂不可用，请检查 Postgres 和 DATABASE_URL',
+        '数据库暂不可用，请检查 Postgres 和 DATABASE_URL',
       );
     }
   }

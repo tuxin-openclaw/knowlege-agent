@@ -3,6 +3,8 @@ import type { FormEvent } from "react";
 import imageApi from "@/api/images";
 import type { Generation } from "@/api/images";
 import uploadApi from "@/api/uploads";
+import { modelConfigs } from "@/api/model-configs";
+import type { ModelConfig } from "@/api/model-configs";
 import "@/App.css";
 
 interface Reference {
@@ -37,6 +39,9 @@ function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<Generation | null>(null);
+  const [models, setModels] = useState<ModelConfig[]>([]);
+  const [modelId, setModelId] = useState("");
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const pending = items.filter(
     (item) => item.status === "queued" || item.status === "generating",
   ).length;
@@ -67,6 +72,28 @@ function App() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // 生图模型来自“模型配置”页面，默认选中默认模型。
+  useEffect(() => {
+    void (async () => {
+      try {
+        const list = (await modelConfigs.list()).filter(
+          (config) => config.kind === "image",
+        );
+        setModels(list);
+        // 选中的模型被删除时回退到默认生图模型。
+        const fallback =
+          (list.find((config) => config.isDefault) ?? list[0])?.id ?? "";
+        setModelId((current) =>
+          list.some((config) => config.id === current) ? current : fallback,
+        );
+      } catch {
+        // 加载失败时页面仍可浏览历史作品，提交时会收到服务端提示。
+      } finally {
+        setModelsLoaded(true);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const interval = pending > 0 ? 5000 : 30000;
@@ -112,7 +139,7 @@ function App() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!prompt.trim() || submitting) return;
+    if (!prompt.trim() || submitting || !modelId) return;
     setSubmitting(true);
     setError("");
     setNotice("");
@@ -128,7 +155,7 @@ function App() {
         setFile(null);
         setLocalPreview("");
       }
-      const job = await imageApi.create(prompt.trim(), key);
+      const job = await imageApi.create(prompt.trim(), key, modelId);
       if (!job) return;
       if (job.referenceKey && job.referenceUrl) {
         setReference((previous) => ({
@@ -195,15 +222,6 @@ function App() {
         <span className="header-tag">AI IMAGE STUDIO</span>
       </header>
       <main>
-        <section className="intro">
-          <span className="eyebrow">让想象，变得可见</span>
-          <h1>
-            从一句灵感，
-            <br />
-            到一张新作品。
-          </h1>
-          <p>写下画面，或加一张参考图，让 AI 接着你的想象创作。</p>
-        </section>
         <nav className="tabs" aria-label="工作台">
           <button
             className={tab === "create" ? "active" : ""}
@@ -257,6 +275,40 @@ function App() {
                     {["胶片街景", "童话插画", "水彩改绘"][index]} ↗
                   </button>
                 ))}
+              </div>
+              <div className="model-select-block">
+                {models.length ? (
+                  <>
+                    <div className="reference-heading">
+                      <label htmlFor="image-model">生图模型</label>
+                      <span>由“模型配置”页面维护</span>
+                    </div>
+                    <select
+                      id="image-model"
+                      className="model-select"
+                      value={modelId}
+                      disabled={submitting}
+                      onChange={(event) => setModelId(event.target.value)}
+                    >
+                      {models.map((config) => (
+                        <option key={config.id} value={config.id}>
+                          {config.name} · {config.model}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <p className="model-hint" role="status">
+                    {modelsLoaded ? (
+                      <>
+                        还没有可用的生图模型，请先到{" "}
+                        <a href="/model-configs">模型配置</a> 添加一个图片模型。
+                      </>
+                    ) : (
+                      "正在加载生图模型…"
+                    )}
+                  </p>
+                )}
               </div>
               <div className="reference-heading">
                 <label htmlFor="reference">参考图片</label>
@@ -326,7 +378,7 @@ function App() {
               )}
               <button
                 className="generate-button"
-                disabled={!prompt.trim() || submitting}
+                disabled={!prompt.trim() || submitting || !modelId}
                 type="submit"
               >
                 {submitting ? (
@@ -422,8 +474,9 @@ function App() {
                             minute: "2-digit",
                           })}
                         </time>
-                        <span>
-                          {item.referenceKey ? "图文生图" : "文字生图"}
+                        <span title={`模型：${item.model}`}>
+                          {item.referenceKey ? "图文生图" : "文字生图"} ·{" "}
+                          {item.model}
                         </span>
                       </div>
                       <p className="card-prompt">{item.prompt}</p>

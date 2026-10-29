@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* 让引入本文件的任何应用都扫描组件类名，避免 Tailwind 只扫 app 目录导致组件样式被裁掉。 */
+@source '../components';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * 主题令牌沿用 demo-web 现有配色（浅绿底、深绿主色），
+ * 这样新组件和还没迁移的老页面放在同一屏里不违和。
+ * 暗色令牌先留 shadcn 默认值，本期不启用暗色切换。
+ */
+:root {
+  --radius: 0.625rem;
+
+  /* --background 给弹框、输入框等组件用（白色）；页面底色由各应用自己设置。 */
+  --background: #ffffff;
+  --foreground: #29322a;
+  --card: #ffffff;
+  --card-foreground: #29322a;
+  --popover: #ffffff;
+  --popover-foreground: #29322a;
+  --primary: #385d42;
+  --primary-foreground: #ffffff;
+  --secondary: #eafaee;
+  --secondary-foreground: #385d42;
+  --muted: #f3f5f0;
+  --muted-foreground: #627568;
+  --accent: #eafaee;
+  --accent-foreground: #2c4c35;
+  --destructive: #a3433e;
+  --destructive-foreground: #ffffff;
+  --border: #e3e9df;
+  --input: #dfe8dc;
+  --ring: #5b8163;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}

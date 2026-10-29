@@ -8,6 +8,8 @@ import {
 import ImageStudio from "@/pages/ImageStudio";
 import { lazy, Suspense } from "react";
 const ModelComparison = lazy(() => import("@/pages/ModelComparison"));
+const ModelUsage = lazy(() => import("@/pages/ModelUsage"));
+const ModelConfigs = lazy(() => import("@/pages/ModelConfigs"));
 import "@/navigation.css";
 
 export default function App() {
@@ -18,6 +20,8 @@ export default function App() {
         <div className="app-nav-links">
           <NavLink to="/images">图片生成</NavLink>
           <NavLink to="/model-comparison">模型参数对比</NavLink>
+          <NavLink to="/model-configs">模型配置</NavLink>
+          <NavLink to="/model-usage">模型用量监控</NavLink>
         </div>
       </nav>
       <Routes>
@@ -28,6 +32,22 @@ export default function App() {
           element={
             <Suspense fallback={<div>正在加载页面…</div>}>
               <ModelComparison />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/model-usage"
+          element={
+            <Suspense fallback={<div>正在加载页面…</div>}>
+              <ModelUsage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/model-configs"
+          element={
+            <Suspense fallback={<div>正在加载页面…</div>}>
+              <ModelConfigs />
             </Suspense>
           }
         />

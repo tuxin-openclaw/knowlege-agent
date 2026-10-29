@@ -11,7 +11,9 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@knowledge/ui/components/*": ["../../packages/ui/src/components/ui/*"],
+      "@knowledge/ui/lib/*": ["../../packages/ui/src/lib/*"]
     },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

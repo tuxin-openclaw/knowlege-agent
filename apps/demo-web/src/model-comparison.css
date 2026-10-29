@@ -1,42 +1,13 @@
 .comparison-page {
   max-width: 1280px;
   margin: auto;
-  padding: 58px 24px 100px;
+  padding: 30px 24px 100px;
   color: #26382d;
 }
-.comparison-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 20px;
-  margin-bottom: 35px;
-}
-.comparison-eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.19em;
-  color: #78916f;
-  font-weight: 800;
-}
-.comparison-heading h1 {
-  font-size: 38px;
-  letter-spacing: -0.04em;
-  margin: 10px 0;
-}
-.comparison-heading p,
 .panels-heading p {
   margin: 0;
   color: #849086;
   font-size: 14px;
-}
-.comparison-badge {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  font-weight: 700;
-  color: #718e6a;
-  border: 1px solid #dbe6d6;
-  border-radius: 30px;
-  padding: 9px 13px;
-  white-space: nowrap;
 }
 .prompt-card,
 .task-card {
@@ -245,13 +216,7 @@
 }
 @media (max-width: 560px) {
   .comparison-page {
-    padding: 38px 16px 70px;
-  }
-  .comparison-heading h1 {
-    font-size: 30px;
-  }
-  .comparison-badge {
-    display: none;
+    padding: 20px 16px 70px;
   }
   .prompt-actions {
     align-items: flex-start;
@@ -263,6 +228,50 @@
   .parameters {
     gap: 12px;
   }
+}
+
+.model-warning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: #fff7ea;
+  border: 1px solid #f2e2c4;
+  color: #8a6a32;
+  font-size: 13px;
+}
+.model-warning a {
+  color: #7a5a20;
+  font-weight: 700;
+}
+.model-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.model-picker label {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3d4f40;
+}
+.model-picker select {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #dfe8dc;
+  border-radius: 9px;
+  background: #fafcf9;
+  color: #26382d;
+  font: inherit;
+  font-size: 12px;
+}
+.model-picker select:disabled {
+  color: #9aa49b;
 }
 
 .thinking-control {

@@ -7,6 +7,8 @@ export interface Generation {
   referenceUrl: string | null;
   imageUrl: string | null;
   model: string;
+  /** 使用的生图模型配置，配置被删除后仍保留当时的记录。 */
+  modelId: string | null;
   status: "queued" | "generating" | "succeeded" | "failed";
   error: string | null;
   createdAt: string;
@@ -22,10 +24,15 @@ const imageApi = {
     const query = before ? `?before=${encodeURIComponent(before)}` : "";
     return http.get(`/api/images${query}`);
   },
-  create(prompt: string, referenceKey?: string): Promise<Generation | null> {
+  create(
+    prompt: string,
+    referenceKey?: string,
+    modelId?: string,
+  ): Promise<Generation | null> {
     return http.post("/api/images", {
       prompt,
       ...(referenceKey ? { referenceKey } : {}),
+      ...(modelId ? { modelId } : {}),
     });
   },
 };

@@ -23,6 +23,7 @@ interface GenerationRow {
   reference_key: string | null;
   result_key: string | null;
   model_name: string;
+  model_config_id: string | null;
   status: 'queued' | 'generating' | 'succeeded' | 'failed';
   error_message: string | null;
   created_at: Date;
@@ -55,10 +56,15 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
   /**
    * 启动后台队列轮询。
    * 定期检查任务，但同一进程里只处理一个生图任务。
+   * 读取模型配置可能因数据库不可用而抛错，这里必须兜住，否则未处理的 Promise
+   * 拒绝会终止整个进程。
    */
   onModuleInit() {
     this.timer = setInterval(() => {
-      if (!this.running && !this.closing) this.active = this.processNext();
+      if (this.running || this.closing) return;
+      this.active = this.processNext().catch(() =>
+        this.logger.warn('生图轮询失败，请检查 Postgres 和模型配置'),
+      );
     }, 1500);
     this.timer.unref();
   }
@@ -75,14 +81,16 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * 校验生图请求并将任务写入队列。
+   * 生图模型由页面维护：请求可指定模型，未指定或已失效时使用默认生图模型。
    * 临时参考图会先复制到正式目录，再把正式 key 保存到任务记录。
    */
   async create(input: unknown) {
     if (!input || typeof input !== 'object')
       throw new BadRequestException('请填写图片描述');
-    const { prompt, referenceKey } = input as {
+    const { prompt, referenceKey, modelId } = input as {
       prompt?: unknown;
       referenceKey?: unknown;
+      modelId?: unknown;
     };
     if (
       typeof prompt !== 'string' ||
@@ -95,10 +103,14 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
       (typeof referenceKey !== 'string' || !REFERENCE_KEY.test(referenceKey))
     )
       throw new BadRequestException('参考图路径无效，请重新上传');
-    const model = this.api.getConfiguration();
+    if (modelId !== undefined && typeof modelId !== 'string')
+      throw new BadRequestException('生图模型选择无效');
+    const model = await this.api.getConfiguration(
+      modelId as string | undefined,
+    );
     if (!model.configured)
       throw new ServiceUnavailableException(
-        '生图服务尚未配置，请检查服务端模型配置',
+        '尚未配置生图模型，请先在“模型配置”页面添加',
       );
     if (!this.storage.getStatus().configured)
       throw new ServiceUnavailableException(
@@ -141,8 +153,8 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
     let row: GenerationRow;
     try {
       const result = await this.db.query<GenerationRow>(
-        `INSERT INTO image_generations (id, prompt, reference_key, model_name) VALUES ($1, $2, $3, $4) RETURNING *`,
-        [id, prompt.trim(), storedReferenceKey, model.model],
+        `INSERT INTO image_generations (id, prompt, reference_key, model_name, model_config_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [id, prompt.trim(), storedReferenceKey, model.model, model.modelId],
       );
       row = result.rows[0];
     } catch (error) {
@@ -189,8 +201,8 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
    * 成功时保存结果并更新 key，失败时将任务标为失败并记录原因。
    */
   async processNext() {
-    if (this.running || this.closing || !this.api.getConfiguration().configured)
-      return;
+    if (this.running || this.closing) return;
+    if (!(await this.api.getConfiguration()).configured) return;
     this.running = true;
     let job: GenerationRow | undefined;
     try {
@@ -208,9 +220,10 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
       const reference = job.reference_key
         ? await this.storage.readImage(job.reference_key)
         : undefined;
+      // 入队时记录的模型配置若已被删除，会回退到当前默认生图模型。
       const image = await this.api.generate(
         job.prompt,
-        job.model_name,
+        job.model_config_id,
         reference,
       );
       const key = `generated-images/${job.id}.${image.extension}`;
@@ -253,6 +266,7 @@ export class ImagesService implements OnModuleInit, OnModuleDestroy {
       referenceKey: row.reference_key,
       resultKey: row.result_key,
       model: row.model_name,
+      modelId: row.model_config_id,
       status: row.status,
       error: row.error_message,
       createdAt: row.created_at.toISOString(),
